@@ -30,12 +30,10 @@ const app = express();
 
 app.use(cors({
     origin:[
-        'http://localhost:3000', 
         'https://yunusemretopcu.com',
         'http://localhost:5173',
-        'http://localhost:2801',
-        'http://51.75.70.65:2801',
-        'https://wp.yunusemretopcu.com',
+        'http://localhost:5000',
+        // buraya kendi url'lerinizi eklemelisiniz
          ],
     credentials: true
 }));
@@ -81,7 +79,7 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
     }
     
     const meta = metaSettings[0];
-    const siteUrl = process.env.SITE_URL || 'https://wp.yunusemretopcu.com';
+    const siteUrl = process.env.SITE_URL || 'http://localhost:5000';
     
     // URL'den içerik türünü ve ID'yi belirle
     let contentTitle = meta.site_title;

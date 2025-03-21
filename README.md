@@ -15,6 +15,7 @@ Bu proje, modern web teknolojileri kullanılarak geliştirilmiş bir kişisel bl
   - Shadcn/ui (UI Bileşenleri için)
   - Lucide React (İkonlar için)
   - TipTap (Zengin metin editörü için)
+  - CKEditor (Zengin metin editörü için)
 
 - Backend:
   - Node.js
@@ -26,7 +27,7 @@ Bu proje, modern web teknolojileri kullanılarak geliştirilmiş bir kişisel bl
 
 ### Gereksinimler
 - Node.js (v18 veya üzeri)
-- npm veya yarn
+- npm, yarn, pnpm, bun
 - MySQL
 
 ### Kurulum
@@ -59,6 +60,16 @@ DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=your_password
 DB_DATABASE=portfolio
+JWT_SECRET=your_secret_key
+
+PORT=5000
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=portfolio
+DB_PORT=3306
+VITE_API_URL=http://localhost:5000
+VITE_CKEDITOR_LICENSE_KEY=your_ckeditor_license_key
 JWT_SECRET=your_secret_key
 ```
 
