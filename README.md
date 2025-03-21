@@ -56,12 +56,6 @@ npm run db:setup
 
 5. `.env` dosyasını oluşturun:
 ```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_DATABASE=portfolio
-JWT_SECRET=your_secret_key
-
 PORT=5000
 DB_HOST=localhost
 DB_USER=root
