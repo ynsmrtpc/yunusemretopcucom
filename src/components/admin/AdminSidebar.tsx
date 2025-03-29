@@ -10,6 +10,7 @@ import {
     Home,
     Navigation,
     Layout,
+    Settings,
 } from "lucide-react";
 
 const menuItems = [
@@ -52,6 +53,11 @@ const menuItems = [
         title: "Footer Ayarları",
         icon: Layout,
         href: "/admin/footer",
+    },
+    {
+        title: "Meta Ayarları",
+        icon: Settings,
+        href: "/admin/meta",
     },
     {
         title: "Kullanıcılar",

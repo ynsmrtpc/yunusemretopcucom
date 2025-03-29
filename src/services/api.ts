@@ -131,4 +131,16 @@ api.interceptors.response.use(
     }
 );
 
+// Meta endpoints
+export const metaService = {
+  get: () => api.get('/meta-settings', { withCredentials: true }),
+  update: (data: FormData) => api.put('/meta-settings', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    withCredentials: true
+  })
+};
+
+
 export default api;

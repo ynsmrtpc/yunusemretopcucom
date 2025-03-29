@@ -26,6 +26,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import { NavbarSettings } from "./pages/admin/NavbarSettings";
 import FooterSettings from "./pages/admin/FooterSettings";
 import { HelmetProvider } from "react-helmet-async";
+import MetaSettings from "./pages/admin/MetaSettings";
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
             <Route path="home" element={<AdminHome />} />
             <Route path="navbar" element={<NavbarSettings />} />
             <Route path="footer" element={<FooterSettings />} />
+            <Route path="meta" element={<MetaSettings />} />
           </Route>
         </Routes>
         <Toaster />
