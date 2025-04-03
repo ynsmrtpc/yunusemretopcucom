@@ -37,19 +37,33 @@ interface ProjectRequestBody {
     galleryImages?: string[];
 }
 
-// Tüm projeleri getir
-const getAllProjects: RequestHandler = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const searchTerm = _req.query.q as string | undefined;
-
+// Tüm projeleri getir (arama ve sayfalama özelliği ile)
+const getAllProjects: RequestHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const searchTerm = req.query.q as string | undefined;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 9;
+    const offset = (page - 1) * limit;
 
     try {
-        const query = searchTerm?.length && searchTerm?.length > 0 
-        ? ` AND title LIKE '%${searchTerm}%'` 
-        : "";
-    
-        // Proje bilgilerini getir
-        const [rows] = await getDB().execute<RowDataPacket[]>(`SELECT * FROM projects WHERE 1=1 ${query} ORDER BY created_at DESC`);
-        
+        let query = 'SELECT * FROM projects';
+        let countQuery = 'SELECT COUNT(*) as total FROM projects';
+        const params: string[] = [];
+        const countParams: string[] = [];
+
+        if (searchTerm) {
+            const whereClause = ' WHERE title LIKE ? OR description LIKE ? OR content LIKE ? OR plaintext LIKE ? OR category LIKE ? OR technologies LIKE ?';
+            query += whereClause;
+            countQuery += whereClause;
+            const likeTerm = `%${searchTerm}%`;
+            params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+            countParams.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+        }
+
+        query += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+
+        const [rows] = await getDB().execute<RowDataPacket[]>(query, params);
+        const [[{ total }]] = await getDB().execute<RowDataPacket[]>(countQuery, countParams);
+
         // Her proje için resim bilgilerini getir
         const projectsWithImages = await Promise.all(rows.map(async (project: RowDataPacket) => {
             // Proje resimlerini getir
@@ -71,8 +85,14 @@ const getAllProjects: RequestHandler = async (_req: Request, res: Response, next
                 galleryImages
             };
         }));
-        
-        res.json(projectsWithImages);
+
+        // Yanıtı oluştur
+        res.json({
+            projects: projectsWithImages,
+            totalProjects: total,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit)
+        });
     } catch (error) {
         next(error);
     }

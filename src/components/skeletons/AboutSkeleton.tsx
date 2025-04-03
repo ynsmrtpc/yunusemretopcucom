@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const AboutSkeleton = () => {
     return (
         <div className="container py-12">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-6xl mx-auto">
                 {/* Başlık */}
                 <Skeleton className="h-10 w-48 mb-8" />
 

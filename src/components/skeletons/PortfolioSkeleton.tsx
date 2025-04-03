@@ -46,7 +46,7 @@ interface PortfolioSkeletonProps {
 export const PortfolioSkeleton = ({ count = 6 }: PortfolioSkeletonProps) => {
     return (
         <div className="container py-12 px-4">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-6xl mx-auto">
                 <Skeleton className="h-10 w-64 mx-auto mb-12" />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {Array(count)

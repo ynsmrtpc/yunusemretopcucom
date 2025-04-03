@@ -8,6 +8,7 @@ export interface BlogList {
     views: number;
     created_at: Date;
     slug:string;
+    coverImage: string;
 }
 
 export interface BlogPost {

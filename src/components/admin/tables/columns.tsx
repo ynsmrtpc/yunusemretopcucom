@@ -1,6 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Eye, ArrowUpDown } from "lucide-react";
+import { Edit, Trash2, ArrowUpDown } from "lucide-react";
 import DialogAlert from "@/components/admin/DialogAlert";
 
 // Kullanıcılar tablosu için kolonlar

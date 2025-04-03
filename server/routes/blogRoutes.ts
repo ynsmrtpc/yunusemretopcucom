@@ -30,17 +30,38 @@ interface CustomSessionData extends SessionData {
     viewedPosts?: { [key: string]: boolean }; // Örnek: { 'blog-slug': true, 'project-slug': true }
 }
 
-// Tüm blogları getir
-const getAllBlogs: RequestHandler = async (_req, res, next): Promise<void> => {
-    const searchTerm = _req.query.q as string | undefined;
+// Tüm blogları getir (arama ve sayfalama özelliği ile)
+const getAllBlogs: RequestHandler = async (req, res, next): Promise<void> => {
+    const searchTerm = req.query.q as string | undefined;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 9;
+    const offset = (page - 1) * limit;
 
     try {
-        const query = searchTerm?.length && searchTerm?.length > 0 
-                        ? ` AND title LIKE '%${searchTerm}%'` 
-                        : "";
-        // Blog bilgilerini getir
-        const [rows] = await getDB().execute<RowDataPacket[]>(`SELECT * FROM blogs WHERE 1=1 ${query} ORDER BY created_at DESC`);
-        
+        let query = 'SELECT * FROM blogs';
+        let countQuery = 'SELECT COUNT(*) as total FROM blogs';
+        // params artık sadece arama terimlerini içerecek (string[])
+        const params: string[] = []; 
+        const countParams: string[] = [];
+
+        if (searchTerm) {
+            const whereClause = ' WHERE title LIKE ? OR content LIKE ? OR plaintext LIKE ? OR excerpt LIKE ?';
+            query += whereClause;
+            countQuery += whereClause;
+            const likeTerm = `%${searchTerm}%`;
+            params.push(likeTerm, likeTerm, likeTerm, likeTerm);
+            countParams.push(likeTerm, likeTerm, likeTerm, likeTerm);
+        }
+
+        // Sıralama ve Limit/Offset ekle (doğrudan string içine)
+        // Güvenlik Notu: limit ve offset parseInt ile alındığı için risk düşük.
+        query += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+        // params.push(limit, offset); // Parametre olarak eklemeyi kaldır
+
+        // Verileri ve toplam sayıyı getir
+        const [rows] = await getDB().execute<RowDataPacket[]>(query, params); // params sadece arama terimlerini içeriyor
+        const [[{ total }]] = await getDB().execute<RowDataPacket[]>(countQuery, countParams);
+
         // Her blog için resim bilgilerini getir
         const blogsWithImages = await Promise.all(rows.map(async (blog: RowDataPacket) => {
             // Blog resimlerini getir
@@ -62,8 +83,14 @@ const getAllBlogs: RequestHandler = async (_req, res, next): Promise<void> => {
                 galleryImages
             };
         }));
-        
-        res.json(blogsWithImages);
+
+        // Yanıtı oluştur
+        res.json({
+            blogs: blogsWithImages, // Mevcut sayfa verisi
+            totalBlogs: total,     // Toplam kayıt sayısı
+            currentPage: page,
+            totalPages: Math.ceil(total / limit)
+        });
     } catch (error) {
         next(error);
     }

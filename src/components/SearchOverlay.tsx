@@ -53,17 +53,6 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose }) => {
             onClick={handleBackdropClick}
         >
             <div className="relative w-full max-w-xl bg-background rounded-lg shadow-2xl p-1">
-                {/* Kapatma Butonu */}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 text-muted-foreground"
-                    onClick={onClose}
-                >
-                    <X className="h-5 w-5" />
-                    <span className="sr-only">Kapat</span>
-                </Button>
-
                 {/* Arama Formu */}
                 <form onSubmit={handleSearchSubmit} className="flex items-center w-full p-4">
                     <Search className="h-5 w-5 mr-3 text-muted-foreground" />
@@ -71,10 +60,11 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose }) => {
                         ref={inputRef}
                         type="search"
                         placeholder="Sitede ara... (Blog, Proje)"
-                        className="flex-grow text-lg border-none focus-visible:ring-0 shadow-none p-0 h-auto bg-transparent"
+                        className="flex-grow text-lg border-1 focus-visible:ring-0 focus:ring-0 focus:!ring-offset-0 shadow-none p-0 h-auto bg-transparent"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+
                 </form>
             </div>
         </div>

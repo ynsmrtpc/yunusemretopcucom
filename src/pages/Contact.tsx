@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { contactService } from '../services/api';
 import SEO from '@/components/SEO';
 import { ContactSkeleton } from '@/components/skeletons/ContactSkeleton';
+import { Link } from 'react-router-dom';
 
 interface ContactInfo {
     email: string;
@@ -110,35 +111,35 @@ const Contact = () => {
                 schemaData={schemaData}
             />
             <div className="container py-12">
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-6xl mx-auto">
                     <h1 className="text-4xl font-bold mb-8">İletişim</h1>
                     <div className="grid gap-12 md:grid-cols-2">
                         <div>
                             <p className="text-muted-foreground mb-8">
-                                Benimle iletişime geçmek için aşağıdaki formu doldurabilirsiniz. En kısa sürede size dönüş yapacağım.
+                                Benimle iletişime geçmek için yandaki formu doldurabilirsiniz. En kısa sürede size dönüş yapacağım.
                             </p>
                             {!loadingInfo && contactInfo && (
                                 <div className="space-y-6">
                                     {contactInfo.email && (
                                         <div>
                                             <h3 className="text-lg font-semibold mb-2">E-posta</h3>
-                                            <a
-                                                href={`mailto:${contactInfo.email}`}
+                                            <Link
+                                                to={`mailto:${contactInfo.email}`}
                                                 className="text-muted-foreground hover:text-primary"
                                             >
                                                 {contactInfo.email}
-                                            </a>
+                                            </Link>
                                         </div>
                                     )}
                                     {contactInfo.phone && (
                                         <div>
                                             <h3 className="text-lg font-semibold mb-2">Telefon</h3>
-                                            <a
-                                                href={`tel:${contactInfo.phone}`}
+                                            <Link
+                                                to={`tel:${contactInfo.phone}`}
                                                 className="text-muted-foreground hover:text-primary"
                                             >
                                                 {contactInfo.phone}
-                                            </a>
+                                            </Link>
                                         </div>
                                     )}
                                     {contactInfo.address && (

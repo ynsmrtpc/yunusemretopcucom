@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { projectService } from '../services/api';
+import api from '../services/api';
 import {
     Card,
     CardHeader,
@@ -13,22 +13,28 @@ import { Button } from '@/components/ui/button';
 import SEO from '@/components/SEO';
 import { PortfolioSkeleton } from '@/components/skeletons/PortfolioSkeleton';
 import { ProjectList as Project } from '@/types/admin/types';
+import { AdminPageTitle } from '@/components/admin/AdminPageTitle';
 
 const Portfolio = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     useEffect(() => {
-        fetchProjects();
-    }, []);
+        fetchProjects(currentPage);
+    }, [currentPage]);
 
-    const fetchProjects = async () => {
+    const fetchProjects = async (page: number) => {
         setLoading(true);
         setError(null);
         try {
-            const { data } = await projectService.getAll();
-            setProjects(data);
+            const params = { page: page };
+            const { data } = await api.get('/projects', { params });
+            setProjects(data.projects);
+            setTotalPages(data.totalPages);
+            setCurrentPage(data.currentPage);
         } catch (err: any) {
             setError('Projeler yüklenirken bir hata oluştu: ' + err.message);
         } finally {
@@ -36,7 +42,13 @@ const Portfolio = () => {
         }
     };
 
-    if (loading) {
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    if (loading && projects.length === 0) {
         return <PortfolioSkeleton />;
     }
 
@@ -57,18 +69,18 @@ const Portfolio = () => {
                 canonical="/portfolio"
             />
             <div className="container py-12 px-4">
-                <div className="max-w-7xl mx-auto">
-                    <h1 className="text-4xl font-bold text-center mb-12">Projelerim</h1>
+                <div className="max-w-6xl mx-auto">
+                    {/* <h1 className="text-4xl font-bold text-center mb-12">Projelerim</h1>*/}
+                    <div className="mb-12">
+                        <AdminPageTitle
+                            title="Projelerim"
+                            description="Geliştirdiğim ve geliştirmekte olduğum tüm projelerime buradan erişebilirsiniz"
+                        />
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {projects.map((project) => (
                             <Card key={project.id} className="hover:shadow-xl transition-shadow flex flex-col justify-between w-full">
-                                {(project.coverImage || project.image) && (
-                                    <img
-                                        src={project.coverImage || project.image}
-                                        alt={project.title}
-                                        className="w-full h-48 object-cover border"
-                                    />
-                                )}
+
                                 <CardHeader>
                                     <CardTitle className="text-xl">{project.title}</CardTitle>
                                     <CardDescription>
@@ -76,7 +88,7 @@ const Portfolio = () => {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-2 flex-1">
-                                    <p className="text-gray-700">{project.description}</p>
+                                    <p className="text-gray-700 line-clamp-5">{project.description}</p>
                                     <div className="flex flex-wrap gap-2">
                                         {project.technologies.map((tech, idx) => (
                                             <span
@@ -122,6 +134,30 @@ const Portfolio = () => {
                             </Card>
                         ))}
                     </div>
+
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center space-x-2 mt-12">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage <= 1 || loading}
+                            >
+                                Önceki
+                            </Button>
+                            <span className="text-sm text-muted-foreground">
+                                Sayfa {currentPage} / {totalPages}
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage >= totalPages || loading}
+                            >
+                                Sonraki
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </div>
         </>

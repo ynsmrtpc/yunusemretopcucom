@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
-import { homeService, blogService, projectService } from '../services/api';
+import { homeService } from '../services/api';
+import api from '../services/api';
 import SEO from '@/components/SEO';
 import { HomeSkeleton } from '@/components/skeletons/HomeSkeleton';
 
@@ -79,11 +80,11 @@ export const Home = () => {
     useEffect(() => {
         const fetchBlogs = async () => {
             try {
-                const { data } = await blogService.getAll();
-                setBlogs(data);
+                const { data: { blogs: blogData } } = await api.get('/blogs', { params: { limit: 3 } });
+                setBlogs(blogData);
                 setLoading(prev => ({ ...prev, blogs: false }));
-            } catch (err) {
-                setError(prev => ({ ...prev, blogs: 'Blog yazıları yüklenirken bir hata oluştu:' + err }));
+            } catch (err: any) {
+                setError(prev => ({ ...prev, blogs: 'Blog yazıları yüklenirken bir hata oluştu: ' + err }));
                 setLoading(prev => ({ ...prev, blogs: false }));
             }
         };
@@ -93,11 +94,11 @@ export const Home = () => {
     useEffect(() => {
         const fetchProjects = async () => {
             try {
-                const { data } = await projectService.getAll();
-                setProjects(data);
+                const { data: { projects: projectData } } = await api.get('/projects', { params: { limit: 3 } });
+                setProjects(projectData);
                 setLoading(prev => ({ ...prev, projects: false }));
-            } catch (err) {
-                setError(prev => ({ ...prev, projects: 'Projeler yüklenirken bir hata oluştu:' + err }));
+            } catch (err: any) {
+                setError(prev => ({ ...prev, projects: 'Projeler yüklenirken bir hata oluştu: ' + err }));
                 setLoading(prev => ({ ...prev, projects: false }));
             }
         };
@@ -232,7 +233,7 @@ export const Home = () => {
                             <p className="text-red-500 text-center mb-8">{error.projects}</p>
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {projects.slice(0, 2).map((project) => (
+                            {projects.map((project) => (
                                 <div key={project.id} className="group relative overflow-hidden rounded-lg border bg-background flex flex-col justify-between">
                                     <div className="aspect-video overflow-hidden">
                                         <img
@@ -283,7 +284,7 @@ export const Home = () => {
                             <p className="text-red-500 text-center mb-8">{error.blogs}</p>
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {blogs.slice(0, 3).map((blog) => (
+                            {blogs.map((blog) => (
                                 <div key={blog.id} className="bg-background rounded-lg border hover:border-primary transition-colors overflow-hidden">
                                     <div className="aspect-video">
                                         <img

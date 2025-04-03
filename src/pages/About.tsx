@@ -112,7 +112,7 @@ const About = () => {
                 schemaData={schemaData}
             />
             <div className="container py-12">
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-6xl mx-auto">
                     {/*  <h1 className="text-4xl font-bold mb-8">Hakkımda</h1> */}
 
                     {/* Ana İçerik */}

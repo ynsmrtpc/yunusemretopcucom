@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const ContactSkeleton = () => {
     return (
         <div className="container py-12">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-6xl mx-auto">
                 <Skeleton className="h-10 w-48 mb-8" />
                 <div className="grid gap-12 md:grid-cols-2">
                     {/* İletişim Bilgileri */}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { projectService } from "@/services/api";
+import api from "@/services/api";
 import { toast } from "sonner";
 import { DataTable } from "@/components/admin/tables/DataTable";
 import { Project, projectColumns } from "@/components/admin/tables/columns";
@@ -24,13 +24,15 @@ const AdminPortfolioList = () => {
     }, []);
 
     const fetchProjects = async () => {
+        setLoading(true);
         try {
-            const response = await projectService.getAll();
-            setProjects(response.data);
-            setLoading(false)
+            const response = await api.get('/projects?limit=9999');
+            setProjects(response.data.projects);
+            setLoading(false);
         } catch (error) {
             console.error("Error fetching projects:", error);
             toast.error("Projeler alınamadı.");
+            setLoading(false);
         }
     };
 
@@ -40,7 +42,7 @@ const AdminPortfolioList = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await projectService.delete(id.toString());
+            await api.delete(`/projects/${id}`);
             toast.success("Proje başarıyla silindi");
             fetchProjects();
         } catch (error) {

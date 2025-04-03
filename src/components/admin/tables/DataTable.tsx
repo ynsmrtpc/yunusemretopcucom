@@ -40,6 +40,7 @@ interface DataTableProps<TData, TValue> {
     searchPlaceholder?: string;
     filterColumnKey?: string;
     filterOptions?: DataTableFilterOption[];
+    pageSize?: number;
 }
 
 export function DataTable<TData, TValue>({
@@ -49,6 +50,7 @@ export function DataTable<TData, TValue>({
     searchPlaceholder = "Ara...",
     filterColumnKey,
     filterOptions,
+    pageSize = 25,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -65,6 +67,11 @@ export function DataTable<TData, TValue>({
         state: {
             sorting,
             columnFilters,
+        },
+        initialState: {
+            pagination: {
+                pageSize: pageSize,
+            },
         },
     });
 
@@ -153,23 +160,35 @@ export function DataTable<TData, TValue>({
                     </TableBody>
                 </Table>
             </div>
-            <div className="flex items-center justify-end space-x-2 py-4">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                >
-                    Önceki
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                >
-                    Sonraki
-                </Button>
+            <div className="flex items-center justify-between space-x-2 py-4">
+                <div className="flex-1 text-sm text-muted-foreground">
+                    {table.getFilteredRowModel().rows.length} kayıttan {
+                        table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1
+                    }-{
+                        Math.min(
+                            (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                            table.getFilteredRowModel().rows.length
+                        )
+                    } arası gösteriliyor.
+                </div>
+                <div className="space-x-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                    >
+                        Önceki
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                    >
+                        Sonraki
+                    </Button>
+                </div>
             </div>
         </div>
     );
