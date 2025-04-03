@@ -12,6 +12,9 @@ import { PortfolioDetailSkeleton } from '@/components/skeletons/PortfolioDetailS
 import { ImGithub } from 'react-icons/im';
 import { Link } from 'react-router-dom';
 import { CgMediaLive } from "react-icons/cg";
+import { ProjectPost } from "@/types/admin/types.ts";
+import { FaGithub } from 'react-icons/fa';
+import { Eye } from 'lucide-react';
 
 interface Project {
     id: number;
@@ -25,29 +28,40 @@ interface Project {
     github_url: string;
     live_url: string;
     slug?: string;
+    views?: number;
 }
 
 const PortfolioDetail = () => {
-    const { id } = useParams<{ id: string }>();
-    const [project, setProject] = useState<Project | null>(null);
+    const { id: slug } = useParams<{ id: string }>();
+    const [project, setProject] = useState<ProjectPost | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchProject = async () => {
+        const fetchProjectAndIncrementView = async () => {
+            if (!slug) return;
+            setLoading(true);
+            setError(null);
             try {
-                if (!id) throw new Error('Proje ID bulunamadı');
-                const { data } = await projectService.getById(id);
-                setProject(data);
-            } catch (err: any) {
-                setError('Proje detayları yüklenirken bir hata oluştu: ' + err.message);
+                // Proje verisini çek
+                const response = await projectService.getById(slug);
+                setProject(response.data);
+
+                // Görüntüleme sayısını artır (arka planda)
+                projectService.incrementView(slug)
+                    .then(() => console.log(`[PortfolioDetail] View count increment request sent for ${slug}`))
+                    .catch(viewError => console.error("[PortfolioDetail] Failed to increment view count:", viewError));
+
+            } catch (err) {
+                console.error("Error fetching project details:", err);
+                setError("Proje detayları yüklenirken bir hata oluştu.");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchProject();
-    }, [id]);
+        fetchProjectAndIncrementView();
+    }, [slug]);
 
     if (loading) {
         return <PortfolioDetailSkeleton />;
@@ -70,112 +84,101 @@ const PortfolioDetail = () => {
 
     const description = project.description || getTextFromHtml(project.content).substring(0, 160);
     const keywords = project.technologies.join(', ');
-    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.siteadresi.com';
-    const projectUrl = `${siteUrl}/portfolio/${project.slug || id}`;
-    const projectImage = project.coverImage || project.image;
+    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.yunusemretopcu.com';
+    const projectUrl = `${siteUrl}/portfolio/${project.slug || slug}`;
+    const projectImage = project.coverImage;
 
     // Schema.org için yapısal veri
     const schemaData = {
-        name: project.title,
-        description: description,
-        image: projectImage,
-        url: projectUrl,
-        offers: {
-            '@type': 'Offer',
-            availability: 'https://schema.org/InStock',
-            price: '0',
-            priceCurrency: 'USD'
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": project.title,
+        "description": project.description,
+        "image": projectImage ? `${siteUrl}${projectImage}` : undefined,
+        "url": projectUrl,
+        "offers": {
+            "@type": "Offer",
+            "availability": "https://schema.org/InStock",
+            "price": "0",
+            "priceCurrency": "USD"
         },
-        brand: {
-            '@type': 'Brand',
-            name: 'Portfolio'
+        "brand": {
+            "@type": "Brand",
+            "name": "Portfolio"
         },
-        additionalProperty: project.technologies.map(tech => ({
-            '@type': 'PropertyValue',
-            name: 'technology',
-            value: tech
+        "additionalProperty": project.technologies.map(tech => ({
+            "@type": "PropertyValue",
+            "name": "technology",
+            "value": tech
         }))
     };
 
     return (
-        <>
+        <div className="container mt-16 lg:mt-32">
             <SEO
                 title={`${project.title} | Portfolio`}
-                description={description}
+                description={project.description}
                 keywords={keywords}
                 ogImage={projectImage}
-                canonical={`/portfolio/${project.slug || id}`}
+                canonical={`/portfolio/${project.slug || slug}`}
                 schemaType="Product"
                 schemaData={schemaData}
             />
-            <div className="container py-12 px-4">
-                <article className="max-w-4xl mx-auto space-y-8">
-                    {(project.coverImage || project.image) && (
-                        <img
-                            src={project.coverImage || project.image}
-                            alt={project.title}
-                            className="w-full h-[400px] object-cover rounded-lg shadow-lg"
-                        />
-                    )}
-                    <div className="flex justify-between items-center space-y-4">
-                        <div className="space-x-1">
-                            {project.technologies.map((tech, idx) => (
-                                <span
-                                    key={idx}
-                                    className="bg-gray-100 text-gray-800 rounded-full px-3 py-1 text-sm font-medium"
-                                >
-                                    {tech.trim()}
+            <div className="xl:relative">
+                <div className="mx-auto max-w-2xl lg:max-w-5xl">
+                    <header className="flex flex-col">
+                        <h1 className="mt-6 text-4xl font-bold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-5xl">
+                            {project.title}
+                        </h1>
+                        <div className="order-first flex items-center justify-between text-base text-zinc-400 dark:text-zinc-500">
+                            <time
+                                dateTime={project.created_at ? new Date(project.created_at).toISOString() : undefined}
+                                className="flex items-center"
+                            >
+                                <span className="h-4 w-0.5 rounded-full bg-zinc-200 dark:bg-zinc-500" />
+                                <span className="ml-3">{project.year}</span>
+                            </time>
+                            {project.views !== undefined && (
+                                <span className="flex items-center">
+                                    <Eye className="mr-1 h-4 w-4" />
+                                    {project.views}
                                 </span>
-                            ))}
+                            )}
                         </div>
-                        <div className="flex justify-center gap-2">
-                            {project.github_url && (
-                                <Button asChild variant="outline">
-                                    <Link
-                                        to={project.github_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className='flex items-center gap-1'
-                                    >
-                                        <ImGithub />
-                                        <span>GitHub</span>
+                    </header>
+                    <article className="mt-16 lg:mt-20">
+                        {project.content && (
+                            <div
+                                className="prose dark:prose-invert prose-lg"
+                                dangerouslySetInnerHTML={{ __html: project.content }}
+                            />
+                        )}
+                        {project.galleryImages && project.galleryImages.length > 0 && (
+                            <div className="mt-12">
+                                <h2 className="text-2xl font-bold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-3xl mb-6">Galeri</h2>
+                                <ImageGallery images={project.galleryImages} />
+                            </div>
+                        )}
+                        <div className="mt-12 flex flex-wrap gap-4">
+                            {project.live_url && (
+                                <Button asChild variant="secondary">
+                                    <Link to={project.live_url} target="_blank" rel="noopener noreferrer">
+                                        <CgMediaLive className="mr-2 h-5 w-5" /> Canlı Demo
                                     </Link>
                                 </Button>
                             )}
-                            {project.live_url && (
+                            {project.github_url && (
                                 <Button asChild variant="outline">
-                                    <a
-                                        href={project.live_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className='flex items-center gap-1'
-                                    >
-                                        <CgMediaLive />
-                                        <span>Canlı Demo</span>
-                                    </a>
+                                    <Link to={project.github_url} target="_blank" rel="noopener noreferrer">
+                                        <FaGithub className="mr-2 h-5 w-5" /> GitHub
+                                    </Link>
                                 </Button>
                             )}
                         </div>
-                    </div>
-                    <Card className="border-0 shadow-none">
-                        <CardContent>
-                            <div
-                                className="prose max-w-none"
-                                dangerouslySetInnerHTML={{ __html: project.content }}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    {/* Galeri Bölümü */}
-                    {project.galleryImages && project.galleryImages.length > 0 && (
-                        <ImageGallery
-                            images={project.galleryImages}
-                            title="Proje Görselleri"
-                        />
-                    )}
-                </article>
+                    </article>
+                </div>
             </div>
-        </>
+        </div>
     );
 };
 

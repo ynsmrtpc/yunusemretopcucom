@@ -68,7 +68,7 @@ const Contact = () => {
         }
     };
 
-    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.siteadresi.com';
+    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.yunusemretopcu.com';
 
     // Schema.org için yapısal veri
     const schemaData = {

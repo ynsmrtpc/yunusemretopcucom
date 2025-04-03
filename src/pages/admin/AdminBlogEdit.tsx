@@ -1,4 +1,3 @@
-import TextField from "@/components/admin/formElements/TextField";
 import TextAreaField from "@/components/admin/formElements/TextAreaField";
 import SelectField from "@/components/admin/formElements/SelectField";
 import SubmitButton from "@/components/admin/formElements/SubmitButton";
@@ -30,20 +29,23 @@ const AdminBlogEdit: React.FC = () => {
     const [blog, setBlog] = useState<BlogPost | null>(null);
 
     useEffect(() => {
-        if (slug) {
-            fetchBlog();
+        if (isEditing && slug) {
+            fetchBlog(slug);
+        } else {
+            setLoading(false);
         }
-        setLoading(false)
-    }, [slug]);
+    }, [slug, isEditing]);
 
-    const fetchBlog = async () => {
+    const fetchBlog = async (blogSlug: string) => {
+        setLoading(true);
         try {
-            const response = await blogService.getById(slug!);
+            const response = await blogService.getById(blogSlug);
             setBlog(response.data);
-            setLoading(false)
         } catch (error) {
             console.error("Error fetching blog:", error);
             toast.error("Blog verisi alınamadı.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -57,7 +59,6 @@ const AdminBlogEdit: React.FC = () => {
         coverImage: blog?.coverImage || "",
         galleryImages: blog?.galleryImages || [],
     };
-
     const handleSubmit = async (
         values: BlogPost,
         { setSubmitting }: FormikHelpers<BlogPost>
@@ -115,6 +116,7 @@ const AdminBlogEdit: React.FC = () => {
         );
     }
 
+
     return (
         <Formik initialValues={initialValues} onSubmit={handleSubmit} enableReinitialize>
             {
@@ -140,8 +142,14 @@ const AdminBlogEdit: React.FC = () => {
                             <div className="lg:col-span-2 space-y-8">
                                 {/* <TextField name="title" label="Başlık" required /> */}
                                 <div className="relative min-h-[500px] border rounded-lg">
-                                    {blog && <EditorContent initialHtml={blog?.content} onContentChange={values => setContentValues(values)} />}
-                                    {!slug && <EditorContent initialHtml={blog?.content} onContentChange={values => setContentValues(values)} />}
+                                    {!loading && (
+                                        <EditorContent
+                                            initialHtml={blog?.content || ''}
+                                            onContentChange={(htmlData, textData, title) => {
+                                                setContentValues({ htmlData, textData, title });
+                                            }}
+                                        />
+                                    )}
                                 </div>
 
                             </div>

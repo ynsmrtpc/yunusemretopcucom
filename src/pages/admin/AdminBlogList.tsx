@@ -8,6 +8,12 @@ import { DataTable } from "@/components/admin/tables/DataTable";
 import { BlogPost, blogColumns } from "@/components/admin/tables/columns";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 
+// Blog durumları için filtre seçenekleri
+const blogStatusOptions = [
+    { label: "Yayında", value: "published" },
+    { label: "Taslak", value: "draft" },
+];
+
 const AdminBlogList = () => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const navigate = useNavigate();

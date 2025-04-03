@@ -1,12 +1,9 @@
 import { Button } from "../../components/ui/button";
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useState } from "react";
 import { AboutData, Experience, Education, Certification } from "@/types/admin/types.ts";
 import { aboutService } from "@/services/api.ts";
 import { toast } from "sonner";
 import { Form, Formik, FormikHelpers } from "formik";
-import EditorMenu from "@/components/admin/EditorMenu.tsx";
 import TextAreaField from "@/components/admin/formElements/TextAreaField";
 import SubmitButton from "@/components/admin/formElements/SubmitButton";
 import { useModalStore } from '@/store/useModalStore';
@@ -16,9 +13,11 @@ import CertificateForm from '@/components/admin/forms/CertificateForm';
 import { MdDelete, MdEdit } from "react-icons/md";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import { Loader2 } from "lucide-react";
+import EditorContent from "@/components/admin/Editor/EditorContent";
 
 const AdminAbout = () => {
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
+    const [aboutContentValues, setAboutContentValues] = useState({ html: '', text: '' });
     const { openModal, closeModal } = useModalStore();
 
     useEffect(() => {
@@ -29,27 +28,19 @@ const AdminAbout = () => {
         try {
             const response = await aboutService.get();
             setAboutData(response.data);
+            setAboutContentValues({
+                html: response.data.content || '',
+                text: response.data.plaintext || ''
+            });
         } catch (error) {
             console.error("Error fetching about:", error);
             toast.error("About verisi alınamadı.");
         }
     };
 
-    const editor = useEditor({
-        extensions: [StarterKit],
-        content: aboutData?.content || "",
-        editorProps: {
-            attributes: {
-                class: "min-h-[500px] p-4 prose prose-sm max-w-none focus:outline-none focus:ring-1 focus:ring-gray-900 rounded-lg",
-            },
-        },
-    });
-
-    useEffect(() => {
-        if (editor && aboutData) {
-            editor.commands.setContent(aboutData.content || "");
-        }
-    }, [editor, aboutData]);
+    const handleAboutContentChange = (html: string, text: string) => {
+        setAboutContentValues({ html, text });
+    };
 
     if (!aboutData) {
         return (
@@ -59,23 +50,23 @@ const AdminAbout = () => {
         );
     }
 
-    const initialValues: AboutData = {
-        content: aboutData?.content || "",
+    const initialValues: Omit<AboutData, 'content' | 'plaintext'> = {
         skills: aboutData?.skills || [""],
         experience: aboutData?.experience || [],
         education: aboutData?.education || [],
         certifications: aboutData?.certifications || [],
-        plaintext: aboutData?.plaintext || "",
     };
 
     const handleSubmit = async (
-        values: AboutData,
-        { setSubmitting }: FormikHelpers<AboutData>
+        values: Omit<AboutData, 'content' | 'plaintext'>,
+        { setSubmitting }: FormikHelpers<Omit<AboutData, 'content' | 'plaintext'>>
     ) => {
         try {
-            const content = editor?.getHTML() || "";
-            const plaintext = editor?.getText() || "";
-            const payload: AboutData = { ...values, content, plaintext };
+            const payload: AboutData = {
+                ...values,
+                content: aboutContentValues.html,
+                plaintext: aboutContentValues.text
+            };
             const result = await aboutService.update(payload);
 
             const { message } = result.data || '';
@@ -216,7 +207,6 @@ const AdminAbout = () => {
         });
     };
 
-    // Deneyim ekleme modalı
     const openExperienceModal = () => {
         openModal({
             title: "Yeni Deneyim Ekle",
@@ -225,7 +215,6 @@ const AdminAbout = () => {
         });
     };
 
-    // Eğitim ekleme modalı
     const openEducationModal = () => {
         openModal({
             title: "Yeni Eğitim Ekle",
@@ -234,7 +223,6 @@ const AdminAbout = () => {
         });
     };
 
-    // Sertifika ekleme modalı
     const openCertificateModal = () => {
         openModal({
             title: "Yeni Sertifika Ekle",
@@ -243,11 +231,14 @@ const AdminAbout = () => {
         });
     };
 
-
     return (
-        <Formik initialValues={initialValues} onSubmit={handleSubmit} enableReinitialize>
-            {
-                ({ isSubmitting, setFieldValue }) => (
+        <div className="mx-auto p-6">
+            <Formik
+                initialValues={initialValues}
+                onSubmit={handleSubmit}
+                enableReinitialize
+            >
+                {({ isSubmitting, values, setFieldValue }) => (
                     <Form className="space-y-8">
                         <div className="flex items-center justify-between">
                             <AdminPageTitle
@@ -256,21 +247,15 @@ const AdminAbout = () => {
                             />
                             <SubmitButton isSubmitting={isSubmitting} />
                         </div>
-
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            {/* Ana İçerik */}
-                            <div className="lg:col-span-2 space-y-8">
-                                <div className="relative min-h-[500px] border rounded-lg">
-                                    <EditorMenu editor={editor} />
-                                    <EditorContent
-                                        editor={editor}
-                                        onBlur={() => setFieldValue("content", editor?.getHTML() || "")}
-                                    />
-                                </div>
+                            <div className="lg:col-span-2 space-y-2">
+                                <EditorContent
+                                    initialHtml={aboutContentValues.html}
+                                    onContentChange={handleAboutContentChange}
+                                />
                             </div>
 
-                            {/* Yan Panel */}
-                            <div className="space-y-6">
+                            <div className="lg:col-span-1 space-y-6">
                                 <div className="space-y-2">
                                     <TextAreaField name="skills" label="Yetenekler" rows={3} required />
                                     <p className="text-sm text-muted-foreground">
@@ -278,7 +263,6 @@ const AdminAbout = () => {
                                     </p>
                                 </div>
 
-                                {/* Deneyim */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-lg font-semibold">Deneyim</h2>
@@ -318,7 +302,6 @@ const AdminAbout = () => {
                                     </div>
                                 </div>
 
-                                {/* Eğitim */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-lg font-semibold">Eğitim</h2>
@@ -358,7 +341,6 @@ const AdminAbout = () => {
                                     </div>
                                 </div>
 
-                                {/* Sertifikalar */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-lg font-semibold">Sertifikalar</h2>
@@ -408,9 +390,11 @@ const AdminAbout = () => {
                                 </div>
                             </div>
                         </div>
+
                     </Form>
                 )}
-        </Formik>
+            </Formik>
+        </div>
     );
 };
 

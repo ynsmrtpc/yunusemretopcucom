@@ -352,7 +352,7 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
                     isVisible: true
                 },
 
-                placeholder: 'Type or paste your content here!',
+                placeholder: 'İçeriği buraya yazınız!',
                 style: {
                     definitions: [
                         {
@@ -404,6 +404,9 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
                 },
                 table: {
                     contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties']
+                },
+                simpleUpload: {
+                    uploadUrl: `${import.meta.env.VITE_API_URL}/api/upload/simple`,
                 }
             }
         };

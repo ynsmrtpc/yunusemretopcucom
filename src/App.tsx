@@ -8,6 +8,7 @@ import Portfolio from "@/pages/Portfolio";
 import PortfolioDetail from "@/pages/PortfolioDetail";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
+import SearchResults from "@/pages/SearchResults";
 
 // Admin sayfaları
 import AdminLogin from "@/pages/admin/AdminLogin";
@@ -27,6 +28,7 @@ import { NavbarSettings } from "./pages/admin/NavbarSettings";
 import FooterSettings from "./pages/admin/FooterSettings";
 import { HelmetProvider } from "react-helmet-async";
 import MetaSettings from "./pages/admin/MetaSettings";
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -43,6 +45,7 @@ function App() {
             <Route path="portfolio/:id" element={<PortfolioDetail />} />
             <Route path="about" element={<About />} />
             <Route path="contact" element={<Contact />} />
+            <Route path="search" element={<SearchResults />} />
           </Route>
 
           {/* Auth Routes */}
@@ -70,6 +73,9 @@ function App() {
             <Route path="footer" element={<FooterSettings />} />
             <Route path="meta" element={<MetaSettings />} />
           </Route>
+
+          {/* Catch-all Route for 404 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
       </Router>

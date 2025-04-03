@@ -23,6 +23,7 @@ export const blogService = {
   create: (data: object) => api.post('/blogs', data),
   update: (id: string, data: object) => api.put(`/blogs/${id}`, data),
   delete: (id: string) => api.delete(`/blogs/${id}`),
+  incrementView: (slug: string) => api.post(`/blogs/${slug}/view`),
 };
 
 // Portfolio/Projects endpoints
@@ -32,6 +33,7 @@ export const projectService = {
   create: (data: object) => api.post('/projects', data),
   update: (id: string, data: object) => api.put(`/projects/${id}`, data),
   delete: (id: string) => api.delete(`/projects/${id}`),
+  incrementView: (slug: string) => api.post(`/projects/${slug}/view`),
 };
 
 // About page endpoints

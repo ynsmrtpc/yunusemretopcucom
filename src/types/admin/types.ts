@@ -19,6 +19,7 @@ export interface BlogPost {
     plaintext : string;
     coverImage?: string;
     galleryImages?: string[];
+    views?: number;
 }
 
 export interface ProjectList {
@@ -32,8 +33,10 @@ export interface ProjectList {
     client: string;
     duration: string;
     year: string;
-    liveUrl: string;
-    githubUrl: string;
+    live_url: string;
+    coverImage?:string;
+    image?:string;
+    github_url: string;
     images: string[];
     views: number;
     slug: string;
@@ -55,6 +58,9 @@ export interface ProjectPost {
     plaintext:string;
     coverImage?: string;
     galleryImages?: string[];
+    slug?: string;
+    created_at?: string;
+    views?: number;
 }
 
 export interface Experience {

@@ -4,6 +4,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import session from 'express-session';
+import sessionFileStore from 'session-file-store';
 import blogRoutes from './routes/blogRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
 import aboutRoutes from './routes/aboutRoutes.js';
@@ -28,6 +30,30 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Session File Store yapılandırması
+const FileStore = sessionFileStore(session);
+const sessionStorePath = path.join(__dirname, 'sessions'); // Oturum dosyalarının saklanacağı yer
+
+// Session middleware
+app.use(session({
+    store: new FileStore({
+        path: sessionStorePath,
+        logFn: function(){}, // Gereksiz logları kapat
+        ttl: 7 * 24 * 60 * 60, // 1 hafta (saniye cinsinden)
+        reapInterval: 60 * 60 // Her saat başı temizle (saniye cinsinden)
+        // Diğer FileStore seçenekleri (ttl, retries vb.) eklenebilir
+    }),
+    secret: process.env.SESSION_SECRET || 'varsayilan_gizli_anahtar', // Güçlü bir secret kullanın!
+    resave: false,
+    saveUninitialized: false, // Oturum içeriği değişmeden kaydetme
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // Production'da sadece HTTPS
+        httpOnly: true,
+        maxAge: 1000 * 60 * 60 * 24 * 7 // Örnek: 1 hafta
+    }
+}));
+
+// CORS yapılandırması (session sonrası)
 app.use(cors({
     origin:[
         'https://yunusemretopcu.com',

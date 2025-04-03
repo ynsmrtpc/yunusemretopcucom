@@ -92,4 +92,35 @@ router.post('/multiple', upload.array('images', 10), (req: FileRequest, res: Res
   }
 });
 
+// YENİ: CKEditor SimpleUploadAdapter için endpoint
+// Varsayılan olarak 'upload' field adını bekler.
+router.post('/simple', upload.single('upload'), (req: FileRequest, res: Response) => {
+    try {
+        if (!req.file) {
+            // Hata durumunda CKEditor'ın beklediği format
+            return res.status(400).json({ 
+                error: { 
+                    message: 'Resim yüklenemedi veya dosya bulunamadı.' 
+                }
+            });
+        }
+
+        const imageUrl = `/uploads/${req.file.filename}`;
+        
+        // Başarı durumunda CKEditor'ın beklediği format
+        return res.status(200).json({
+            url: imageUrl
+        });
+
+    } catch (error: any) {
+        console.error('CKEditor resim yükleme hatası:', error);
+        // Genel hata durumunda da CKEditor formatında yanıt ver
+        return res.status(500).json({ 
+            error: { 
+                message: error.message || 'Resim yüklenirken sunucu hatası oluştu.' 
+            }
+        });
+    }
+});
+
 export default router; 

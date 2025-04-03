@@ -23,7 +23,7 @@ interface ContentProps {
 }
 
 const AdminPortfolioEdit = () => {
-    const { id: slug } = useParams();
+    const { id: slug } = useParams<{ id: string }>();
     const isEditing = Boolean(slug);
     const navigate = useNavigate();
     const [contentValues, setContentValues] = useState<ContentProps>({ htmlData: '', textData: '', title: '' });
@@ -31,20 +31,23 @@ const AdminPortfolioEdit = () => {
     const [project, setProject] = useState<ProjectPost | null>(null);
 
     useEffect(() => {
-        if (slug) {
-            fetchBlog();
+        if (isEditing && slug) {
+            fetchProject(slug);
+        } else {
+            setLoading(false);
         }
-        setLoading(false)
-    }, [slug]);
+    }, [slug, isEditing]);
 
-    const fetchBlog = async () => {
+    const fetchProject = async (projectSlug: string) => {
+        setLoading(true);
         try {
-            const response = await projectService.getById(slug!);
+            const response = await projectService.getById(projectSlug);
             setProject(response.data);
-            setLoading(false)
         } catch (error) {
-            console.error("Error fetching blog:", error);
-            toast.error("Blog verisi alınamadı.");
+            console.error("Error fetching project:", error);
+            toast.error("Proje verisi alınamadı.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -95,7 +98,6 @@ const AdminPortfolioEdit = () => {
 
             // Dosya yükleme işlemlerini gerçekleştir
             payload = await processFormImages(payload);
-            console.log(payload)
             // API'ye gönder
             let result;
             if (isEditing) {
@@ -134,6 +136,7 @@ const AdminPortfolioEdit = () => {
         );
     }
 
+
     return (
         <Formik
             enableReinitialize
@@ -167,8 +170,14 @@ const AdminPortfolioEdit = () => {
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">İçerik</label>
                                 <div className="relative min-h-[500px] border rounded-lg">
-                                    {project && <EditorContent initialHtml={project?.content} onContentChange={values => setContentValues(values)} />}
-                                    {!slug && <EditorContent initialHtml={project?.content || ""} onContentChange={values => setContentValues(values)} />}
+                                    {!loading && (
+                                        <EditorContent
+                                            initialHtml={project?.content || ''}
+                                            onContentChange={(htmlData, textData, title) => {
+                                                setContentValues({ htmlData, textData, title });
+                                            }}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         </div>

@@ -75,7 +75,7 @@ const About = () => {
 
     const description = getTextFromHtml(about.content).substring(0, 160);
     const keywords = about.skills ? about.skills.join(', ') : 'hakkımda, özgeçmiş, yetenekler';
-    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.siteadresi.com';
+    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.yunusemretopcu.com';
 
     // Schema.org için yapısal veri
     const schemaData = {
@@ -85,9 +85,9 @@ const About = () => {
         jobTitle: about.experience && about.experience.length > 0 ? about.experience[0].position : 'Web Geliştirici',
         url: `${siteUrl}/about`,
         sameAs: [
-            'https://github.com/username',
-            'https://linkedin.com/in/username',
-            'https://twitter.com/username'
+            'https://github.com/ynsmrtpc',
+            'https://linkedin.com/in/yunusemretopcu',
+            'https://twitter.com/ynsmrtpc'
         ],
         worksFor: about.experience && about.experience.length > 0 ? {
             '@type': 'Organization',
@@ -113,7 +113,7 @@ const About = () => {
             />
             <div className="container py-12">
                 <div className="max-w-4xl mx-auto">
-                    <h1 className="text-4xl font-bold mb-8">Hakkımda</h1>
+                    {/*  <h1 className="text-4xl font-bold mb-8">Hakkımda</h1> */}
 
                     {/* Ana İçerik */}
                     <div className="prose prose-lg mb-12" dangerouslySetInnerHTML={{ __html: about.content }} />
@@ -183,7 +183,7 @@ const About = () => {
                     )}
 
 
-                    {about.certifications && (
+                    {about.certifications.length > 0 && (
                         <section>
                             <h2 className="text-2xl font-bold mb-4">Sertifikalar</h2>
                             <div className="space-y-4">

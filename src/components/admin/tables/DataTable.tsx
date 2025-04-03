@@ -20,19 +20,35 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+
+interface DataTableFilterOption {
+    label: string;
+    value: string;
+}
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
     searchKey?: string;
     searchPlaceholder?: string;
+    filterColumnKey?: string;
+    filterOptions?: DataTableFilterOption[];
 }
 
 export function DataTable<TData, TValue>({
     columns,
     data,
     searchKey,
-    searchPlaceholder = "Ara..."
+    searchPlaceholder = "Ara...",
+    filterColumnKey,
+    filterOptions,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -54,8 +70,8 @@ export function DataTable<TData, TValue>({
 
     return (
         <div>
-            {searchKey && (
-                <div className="flex items-center py-4">
+            <div className="flex items-center py-4 space-x-2">
+                {searchKey && (
                     <Input
                         placeholder={searchPlaceholder}
                         value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
@@ -64,8 +80,29 @@ export function DataTable<TData, TValue>({
                         }
                         className="max-w-sm"
                     />
-                </div>
-            )}
+                )}
+                {filterColumnKey && filterOptions && (
+                    <Select
+                        value={(table.getColumn(filterColumnKey)?.getFilterValue() as string) ?? "all"}
+                        onValueChange={(value) => {
+                            const filterValue = value === "all" ? null : value;
+                            table.getColumn(filterColumnKey)?.setFilterValue(filterValue);
+                        }}
+                    >
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Duruma göre filtrele" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tümü</SelectItem>
+                            {filterOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+            </div>
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>

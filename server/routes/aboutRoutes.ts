@@ -27,6 +27,7 @@ const getAbout: RequestHandler = async (_req, res, next): Promise<void> => {
 // About bilgisini güncelle
 const updateAbout: RequestHandler<object, object, AboutRequestBody> = async (req, res, next): Promise<void> => {
     const { content, skills, experience, education, plaintext, certifications } = req.body;
+    const {htmlData,textData} = content;
     const JSONskills = (typeof skills === "string") ? skills.split(",") : skills;
     try {
         const [existingRows] = await getDB().execute<RowDataPacket[]>('SELECT * FROM about LIMIT 1');
@@ -35,14 +36,14 @@ const updateAbout: RequestHandler<object, object, AboutRequestBody> = async (req
             // Kayıt yoksa yeni kayıt oluştur
             const [result] = await getDB().execute<ResultSetHeader>(
                 'INSERT INTO about (content, skills, experience, education,plaintext,certifications) VALUES (?, ?, ?, ?, ?, ?)',
-                [content, JSONskills, experience, education, plaintext,certifications]
+                [htmlData, JSONskills, experience, education, textData,certifications]
             );
             res.status(201).json({ id: result.insertId, message: 'About bilgisi başarıyla oluşturuldu' });
         } else {
             // Varolan kaydı güncelle
             await getDB().execute<ResultSetHeader>(
                 'UPDATE about SET content = ?, skills = ?, experience = ?, education = ?, plaintext = ?, certifications = ?',
-                [content, JSONskills, experience, education, plaintext,certifications]
+                [htmlData, JSONskills, experience, education, textData,certifications]
             );
             res.json({ message: 'About bilgisi başarıyla güncellendi' });
         }

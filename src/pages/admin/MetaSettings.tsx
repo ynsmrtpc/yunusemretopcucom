@@ -116,20 +116,15 @@ const MetaSettings = () => {
             formData.append('facebook_app_id', values.facebook_app_id || '');
             formData.append('google_analytics_id', values.google_analytics_id || '');
 
-            console.log('FormData hazırlandı');
 
             if (ogImageFile) {
                 formData.append('og_image', ogImageFile);
-                console.log('OG Image eklendi:', ogImageFile.name);
             }
             if (faviconFile) {
                 formData.append('favicon', faviconFile);
-                console.log('Favicon eklendi:', faviconFile.name);
             }
 
-            console.log('API isteği gönderiliyor...');
             const response = await metaService.update(formData);
-            console.log('API yanıtı:', response);
 
             toast.success('Meta ayarları başarıyla güncellendi');
         } catch (error) {

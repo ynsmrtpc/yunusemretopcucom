@@ -404,7 +404,7 @@ export const FooterSettings = () => {
                                                     <Field
                                                         name={`social_links.${index}.url`}
                                                         as={Input}
-                                                        placeholder="https://twitter.com/username"
+                                                        placeholder="https://twitter.com/ynsmrtpc"
                                                     />
                                                     {errors.social_links &&
                                                         errors.social_links[index] &&

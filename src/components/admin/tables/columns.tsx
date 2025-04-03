@@ -1,6 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Eye } from "lucide-react";
+import { Edit, Trash2, Eye, ArrowUpDown } from "lucide-react";
 import DialogAlert from "@/components/admin/DialogAlert";
 
 // Kullanıcılar tablosu için kolonlar
@@ -96,7 +96,17 @@ export const blogColumns = (
 ): ColumnDef<BlogPost>[] => [
         {
             accessorKey: "title",
-            header: "Başlık",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Başlık
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
         },
         {
             accessorKey: "excerpt",
@@ -108,10 +118,21 @@ export const blogColumns = (
                     </div>
                 );
             },
+            enableSorting: false,
         },
         {
             accessorKey: "status",
-            header: "Durum",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Durum
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
             cell: ({ row }) => {
                 const status = row.getValue("status") as string;
                 return (
@@ -126,11 +147,31 @@ export const blogColumns = (
         },
         {
             accessorKey: "views",
-            header: "Görüntülenme",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Görüntülenme
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
         },
         {
             accessorKey: "created_at",
-            header: "Tarih",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Tarih
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
             cell: ({ row }) => {
                 return new Date(row.getValue("created_at")).toLocaleDateString("tr-TR");
             },
@@ -165,6 +206,7 @@ export const blogColumns = (
                     </div>
                 );
             },
+            enableSorting: false,
         },
     ];
 
@@ -178,6 +220,7 @@ export interface Project {
     views: number;
     slug: string;
     created_at: string;
+    year: string;
 }
 
 export const projectColumns = (
@@ -186,7 +229,17 @@ export const projectColumns = (
 ): ColumnDef<Project>[] => [
         {
             accessorKey: "title",
-            header: "Başlık",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Başlık
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
         },
         {
             accessorKey: "description",
@@ -198,14 +251,35 @@ export const projectColumns = (
                     </div>
                 );
             },
+            enableSorting: false,
         },
         {
             accessorKey: "category",
-            header: "Kategori",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Kategori
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
         },
         {
             accessorKey: "status",
-            header: "Durum",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Durum
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
             cell: ({ row }) => {
                 const status = row.getValue("status") as string;
                 return (
@@ -220,7 +294,32 @@ export const projectColumns = (
         },
         {
             accessorKey: "views",
-            header: "Görüntülenme",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Görüntülenme
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
+        },
+        {
+            accessorKey: "year",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Yıl
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
+            enableSorting: true,
         },
         {
             id: "actions",
@@ -252,6 +351,7 @@ export const projectColumns = (
                     </div>
                 );
             },
+            enableSorting: false,
         },
     ];
 

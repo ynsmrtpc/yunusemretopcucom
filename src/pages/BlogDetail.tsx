@@ -4,10 +4,10 @@ import { blogService } from '../services/api';
 import {
     Card,
     CardHeader,
-    CardTitle,
     CardContent,
 } from '@/components/ui/card';
 import ImageGallery from '@/components/ImageGallery';
+import { Eye } from 'lucide-react';
 import SEO from '@/components/SEO';
 import { BlogDetailSkeleton } from '@/components/skeletons/BlogDetailSkeleton';
 
@@ -21,6 +21,7 @@ interface Blog {
     created_at: string;
     excerpt?: string;
     slug?: string;
+    views?: number;
 }
 
 const BlogDetail = () => {
@@ -30,20 +31,27 @@ const BlogDetail = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchBlog = async () => {
+        const fetchBlogAndIncrementView = async () => {
+            if (!id) return;
+            setLoading(true);
+            setError(null);
             try {
-                if (!id) throw new Error('Blog ID bulunamadı');
                 const { data } = await blogService.getById(id);
-                //  data.image = "https://images.pexels.com/photos/30146008/pexels-photo-30146008.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
                 setBlog(data);
+
+                blogService.incrementView(id)
+                    .then(() => console.log(`[BlogDetail] View count increment request sent for ${id}`))
+                    .catch(viewError => console.error("[BlogDetail] Failed to increment view count:", viewError));
+
             } catch (err: any) {
+                console.error("Error fetching blog details:", err);
                 setError('Blog yazısı yüklenirken bir hata oluştu: ' + err.message);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchBlog();
+        fetchBlogAndIncrementView();
     }, [id]);
 
     if (loading) {
@@ -66,7 +74,7 @@ const BlogDetail = () => {
     };
 
     const description = blog.excerpt || getTextFromHtml(blog.content).substring(0, 160);
-    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.siteadresi.com';
+    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.yunusemretopcu.com';
     const blogUrl = `${siteUrl}/blog/${blog.slug || id}`;
     const blogImage = blog.coverImage || blog.image;
 
@@ -129,13 +137,21 @@ const BlogDetail = () => {
 
                     <Card className="border-0 shadow-none">
                         <CardHeader>
-                            <time className="text-sm text-gray-500 block">
-                                {new Date(blog.created_at).toLocaleDateString('tr-TR', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                })}
-                            </time>
+                            <div className="flex items-center justify-between text-sm text-gray-500">
+                                <time dateTime={blog.created_at ? new Date(blog.created_at).toISOString() : undefined}>
+                                    {new Date(blog.created_at).toLocaleDateString('tr-TR', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                    })}
+                                </time>
+                                {blog.views !== undefined && (
+                                    <span className="flex items-center">
+                                        <Eye className="mr-1 h-4 w-4" />
+                                        {blog.views}
+                                    </span>
+                                )}
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <div

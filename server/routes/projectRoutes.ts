@@ -1,8 +1,21 @@
-import { Router, RequestHandler } from 'express';
+import { Router, RequestHandler, Request, Response, NextFunction } from 'express';
 import { getDB } from '../config/db.js';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import slugify from "slugify";
 import {isAdmin, verifyToken} from "../middleware/auth";
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { SessionData } from 'express-session';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '../../');
+
+// Session verisine özel alan eklemek için tipi genişletelim
+interface CustomSessionData extends SessionData {
+    viewedPosts?: { [key: string]: boolean }; 
+}
 
 const router = Router();
 
@@ -11,24 +24,31 @@ interface ProjectRequestBody {
     description: string;
     live_url: string;
     github_url: string;
-    technologies: string;
+    technologies: string | string[];
     plaintext: string;
     category: string;
     client: string;
     content: string;
     duration: string;
     status: string;
-    year: number;
+    year: number | string;
     slug?: string;
     coverImage?: string;
     galleryImages?: string[];
 }
 
 // Tüm projeleri getir
-const getAllProjects: RequestHandler = async (_req, res, next): Promise<void> => {
+const getAllProjects: RequestHandler = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const searchTerm = _req.query.q as string | undefined;
+
+
     try {
+        const query = searchTerm?.length && searchTerm?.length > 0 
+        ? ` AND title LIKE '%${searchTerm}%'` 
+        : "";
+    
         // Proje bilgilerini getir
-        const [rows] = await getDB().execute<RowDataPacket[]>('SELECT * FROM projects ORDER BY created_at DESC');
+        const [rows] = await getDB().execute<RowDataPacket[]>(`SELECT * FROM projects WHERE 1=1 ${query} ORDER BY created_at DESC`);
         
         // Her proje için resim bilgilerini getir
         const projectsWithImages = await Promise.all(rows.map(async (project: RowDataPacket) => {
@@ -59,7 +79,7 @@ const getAllProjects: RequestHandler = async (_req, res, next): Promise<void> =>
 };
 
 // Tek bir proje getir
-const getProjectById: RequestHandler<{ id: string }> = async (req, res, next): Promise<void> => {
+const getProjectById: RequestHandler<{ id: string }> = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
     try {
         // Proje bilgilerini getir
         const [projectRows] = await getDB().execute<RowDataPacket[]>('SELECT * FROM projects WHERE slug = ?', [req.params.id]);
@@ -97,7 +117,7 @@ const getProjectById: RequestHandler<{ id: string }> = async (req, res, next): P
 };
 
 // Yeni proje ekle
-const createProject: RequestHandler<object, object, ProjectRequestBody> = async (req, res, next): Promise<void> => {
+const createProject: RequestHandler<object, object, ProjectRequestBody> = async (req: Request<object, object, ProjectRequestBody>, res: Response, next: NextFunction): Promise<void> => {
     const { 
         category, client, content, description, duration, github_url, live_url, 
         plaintext, status, technologies, title, year, coverImage, galleryImages 
@@ -110,7 +130,7 @@ const createProject: RequestHandler<object, object, ProjectRequestBody> = async 
         // Proje kaydını oluştur
         const [result] = await getDB().execute<ResultSetHeader>(
             'INSERT INTO projects (category, client, content, description, duration, github_url, live_url, plaintext, status, technologies, title, year, slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [category, client, content, description, duration, github_url, live_url, plaintext, status, technologiesArray, title, year, slug]
+            [category, client, content, description, duration, github_url, live_url, plaintext, status, JSON.stringify(technologiesArray), title, year, slug]
         );
         
         const projectId = result.insertId;
@@ -125,7 +145,7 @@ const createProject: RequestHandler<object, object, ProjectRequestBody> = async 
         
         // Galeri resimleri varsa kaydet
         if (galleryImages && galleryImages.length > 0) {
-            const galleryValues = galleryImages.map(imageUrl => [projectId, imageUrl, 'gallery']);
+            const galleryValues = galleryImages.map((imageUrl: string) => [projectId, imageUrl, 'gallery']);
             
             for (const values of galleryValues) {
                 await getDB().execute(
@@ -142,76 +162,194 @@ const createProject: RequestHandler<object, object, ProjectRequestBody> = async 
 };
 
 // Proje güncelle
-const updateProject: RequestHandler<{ id: string }, object, ProjectRequestBody> = async (req, res, next): Promise<void> => {
+const updateProject: RequestHandler<{ id: string }, object, ProjectRequestBody> = async (req: Request<{ id: string }, object, ProjectRequestBody>, res: Response, next: NextFunction): Promise<void> => {
     const { 
         category, client, content, description, duration, github_url, live_url, 
         plaintext, status, technologies, title, year, coverImage, galleryImages 
     } = req.body;
     
-    const slug = slugify(title, { lower: true });
+    const currentSlug = req.params.id;
+    const newSlug = slugify(title, { lower: true });
     const technologiesArray = (typeof technologies === "string" )? technologies.split(',').map((tech: string) => tech.trim()) : technologies;
     
+    let connection;
     try {
-        // Önce proje ID'sini al
-        const [projectRows] = await getDB().execute<RowDataPacket[]>(
+        connection = await getDB().getConnection();
+        await connection.beginTransaction();
+
+        // Önce proje ID'sini ve mevcut resimleri al
+        const [projectRows] = await connection.execute<RowDataPacket[]>(
             'SELECT id FROM projects WHERE slug = ?',
-            [req.params.id]
+            [currentSlug]
         );
         
         if (projectRows.length === 0) {
+            await connection.rollback();
+            connection.release();
             res.status(404).json({ message: 'Proje bulunamadı' });
             return;
         }
         
         const projectId = projectRows[0].id;
+
+        // Silinecek eski resim URL'lerini al
+        const [oldImageRows] = await connection.execute<RowDataPacket[]>(
+            'SELECT image_url FROM project_images WHERE project_id = ?',
+            [projectId]
+        );
+        const oldImageUrls: string[] = oldImageRows.map((row: RowDataPacket) => row.image_url);
         
-        // Proje bilgilerini güncelle
-        const [result] = await getDB().execute<ResultSetHeader>(
+        // Proje bilgilerini güncelle (yeni slug ile)
+        await connection.execute<ResultSetHeader>(
             'UPDATE projects SET category = ?, client = ?, content = ?, description = ?, duration = ?, github_url = ?, live_url = ?, plaintext = ?, status = ?, technologies = ?, title = ?, year = ?, slug = ? WHERE id = ?',
-            [category, client, content, description, duration, github_url, live_url, plaintext, status, technologiesArray, title, year, slug, projectId]
+            [category, client, content, description, duration, github_url, live_url, plaintext, status, JSON.stringify(technologiesArray), title, year, newSlug, projectId]
         );
         
-        // Mevcut resimleri sil
-        await getDB().execute('DELETE FROM project_images WHERE project_id = ?', [projectId]);
+        // Mevcut resim kayıtlarını veritabanından sil
+        await connection.execute('DELETE FROM project_images WHERE project_id = ?', [projectId]);
         
-        // Kapak resmi varsa kaydet
+        // Yeni kapak resmi varsa kaydet
         if (coverImage) {
-            await getDB().execute(
+            await connection.execute(
                 'INSERT INTO project_images (project_id, image_url, type) VALUES (?, ?, ?)',
                 [projectId, coverImage, 'cover']
             );
         }
         
-        // Galeri resimleri varsa kaydet
+        // Yeni galeri resimleri varsa kaydet
         if (galleryImages && galleryImages.length > 0) {
-            const galleryValues = galleryImages.map(imageUrl => [projectId, imageUrl, 'gallery']);
+            const galleryValues = galleryImages.map((imageUrl: string) => [projectId, imageUrl, 'gallery']);
             
             for (const values of galleryValues) {
-                await getDB().execute(
+                await connection.execute(
                     'INSERT INTO project_images (project_id, image_url, type) VALUES (?, ?, ?)',
                     values
                 );
             }
         }
+
+        await connection.commit();
+        connection.release();
+
+        // Veritabanı işlemleri başarılı olduktan sonra eski dosyaları sil
+        for (const oldImageUrl of oldImageUrls) {
+            if (oldImageUrl) {
+                const filePath = path.join(projectRoot, 'public', oldImageUrl);
+                try {
+                    await fs.unlink(filePath);
+                } catch (unlinkError: any) {
+                    if (unlinkError.code !== 'ENOENT') {
+                        console.error(`Eski dosya silinemedi (${filePath}):`, unlinkError);
+                    }
+                }
+            }
+        }
         
         res.json({ message: 'Proje başarıyla güncellendi' });
     } catch (error) {
+        if (connection) {
+            await connection.rollback();
+            connection.release();
+        }
         next(error);
     }
 };
 
 // Proje sil
-const deleteProject: RequestHandler<{ id: string }> = async (req, res, next): Promise<void> => {
+const deleteProject: RequestHandler<{ id: string }> = async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
+    let connection;
     try {
-        // Proje resimlerini sil (foreign key constraint ile otomatik silinecek)
-        const [result] = await getDB().execute<ResultSetHeader>('DELETE FROM projects WHERE id = ?', [req.params.id]);
-        
-        if (result.affectedRows === 0) {
+        connection = await getDB().getConnection();
+        await connection.beginTransaction();
+
+        // Silinecek proje ID'sini al
+        const [projectRows] = await connection.execute<RowDataPacket[]>('SELECT id FROM projects WHERE slug = ?', [req.params.id]);
+
+        if (projectRows.length === 0) {
+            await connection.rollback();
+            connection.release();
             res.status(404).json({ message: 'Proje bulunamadı' });
             return;
         }
+        const projectId = projectRows[0].id;
+
+        // Önce silinecek resimlerin URL'lerini al (fiziksel silme için)
+        const [oldImageRows] = await connection.execute<RowDataPacket[]>('SELECT image_url FROM project_images WHERE project_id = ?', [projectId]);
+        const oldImageUrls: string[] = oldImageRows.map((row: RowDataPacket) => row.image_url);
+
+        // Veritabanından projeyi sil (ilişkili resim kayıtları da silinmeli - CASCADE varsa)
+        // Önce resim kayıtlarını sil
+        await connection.execute('DELETE FROM project_images WHERE project_id = ?', [projectId]);
+        // Sonra projeyi sil
+        const [result] = await connection.execute<ResultSetHeader>('DELETE FROM projects WHERE id = ?', [projectId]);
+        
+        if (result.affectedRows === 0) {
+            // Bu durum yukarıdaki kontrol nedeniyle pek olası değil
+            await connection.rollback();
+            connection.release();
+            res.status(404).json({ message: 'Proje bulunamadı veya silinemedi' });
+            return;
+        }
+
+        await connection.commit();
+        connection.release();
+
+        // Veritabanı silme başarılı olduktan sonra eski dosyaları sil
+        for (const oldImageUrl of oldImageUrls) {
+            if (oldImageUrl) {
+                const filePath = path.join(projectRoot, 'public', oldImageUrl);
+                try {
+                    await fs.unlink(filePath);
+                } catch (unlinkError: any) {
+                    if (unlinkError.code !== 'ENOENT') {
+                        console.error(`Eski dosya silinemedi (${filePath}):`, unlinkError);
+                    }
+                }
+            }
+        }
         
         res.json({ message: 'Proje başarıyla silindi' });
+    } catch (error) {
+        if (connection) {
+            await connection.rollback();
+            connection.release();
+        }
+        next(error);
+    }
+};
+
+// YENİ: Proje görüntüleme sayısını artırma endpoint'i
+const incrementProjectView: RequestHandler<{ slug: string }> = async (req, res, next) => {
+    const slug = req.params.slug;
+    const session = req.session as CustomSessionData; 
+
+    try {
+        if (!session.viewedPosts) {
+            session.viewedPosts = {}; 
+        }
+
+        const postKey = `project-${slug}`;
+        if (session.viewedPosts[postKey]) {
+            return res.status(200).json({ message: 'Already viewed in this session.' });
+        }
+
+        const [result] = await getDB().execute<ResultSetHeader>(
+            'UPDATE projects SET views = views + 1 WHERE slug = ?',
+            [slug]
+        );
+
+        if (result.affectedRows > 0) {
+            session.viewedPosts[postKey] = true;
+             session.save((err) => {
+                 if (err) {
+                     return next(err);
+                 }
+                 res.status(200).json({ message: 'View count incremented.' });
+             });
+        } else {
+            res.status(404).json({ message: 'Project not found or view count could not be updated.' });
+        }
+
     } catch (error) {
         next(error);
     }
@@ -222,5 +360,6 @@ router.get('/:id', getProjectById);
 router.post('/', verifyToken, isAdmin, createProject);
 router.put('/:id', verifyToken, isAdmin, updateProject);
 router.delete('/:id', verifyToken, isAdmin, deleteProject);
+router.post('/:slug/view', incrementProjectView);
 
 export default router; 

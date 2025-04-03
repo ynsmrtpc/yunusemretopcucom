@@ -23,7 +23,7 @@ router.get('/stats', verifyToken, isAdmin, async (_req: Request, res: Response) 
             blogs: blogCount[0].count,
             projects: projectCount[0].count,
             messages: messageCount[0].count,
-            totalViews: (blogViews[0]?.total || 0) + (projectViews[0]?.total || 0)
+            totalViews: parseInt(blogViews[0]?.total || 0) + parseInt(projectViews[0]?.total || 0)
         };
 
         res.json(stats);

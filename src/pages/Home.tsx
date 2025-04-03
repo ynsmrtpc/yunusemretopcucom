@@ -116,7 +116,7 @@ export const Home = () => {
         );
     }
 
-    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.siteadresi.com';
+    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.yunusemretopcu.com';
 
     // Schema.org için yapısal veri
     const schemaData = {
@@ -137,7 +137,7 @@ export const Home = () => {
         <>
             <SEO
                 title="Ana Sayfa | Portfolio"
-                description={data.hero_subtitle || "Kişisel portfolio websitesi"}
+                description={data.hero_subtitle || "Yunus Emre Topçu"}
                 keywords="portfolio, web geliştirme, projeler"
                 ogImage={data.hero_image || undefined}
                 canonical="/"
@@ -233,7 +233,7 @@ export const Home = () => {
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {projects.slice(0, 2).map((project) => (
-                                <div key={project.id} className="group relative overflow-hidden rounded-lg border bg-background">
+                                <div key={project.id} className="group relative overflow-hidden rounded-lg border bg-background flex flex-col justify-between">
                                     <div className="aspect-video overflow-hidden">
                                         <img
                                             src={project.coverImage || project.image || '/placeholder-image.jpg'}
@@ -241,11 +241,13 @@ export const Home = () => {
                                             className="object-cover w-full h-full transition-transform group-hover:scale-105"
                                         />
                                     </div>
-                                    <div className="p-6">
+                                    <div className="p-6 flex-1">
                                         <h3 className="text-xl font-bold mb-2">{project.title}</h3>
                                         <p className="text-muted-foreground mb-4">
                                             {project.description}
                                         </p>
+                                    </div>
+                                    <div className="p-6 pt-0">
                                         <div className="flex flex-wrap gap-2 mb-4">
                                             {project.technologies.map((tech, index) => (
                                                 <span key={index} className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm">

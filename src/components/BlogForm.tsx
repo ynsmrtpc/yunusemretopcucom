@@ -30,7 +30,6 @@ const BlogForm = () => {
     const handleSubmit = async (values: BlogFormValues) => {
         try {
             // API çağrısı yapılabilir
-            console.log(values);
             closeModal();
         } catch (error) {
             console.error('Blog oluşturulurken hata:', error);

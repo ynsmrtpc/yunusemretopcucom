@@ -3,6 +3,14 @@ import { getDB } from '../config/db.js';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import slugify from 'slugify';
 import {isAdmin, verifyToken} from "../middleware/auth";
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { SessionData } from 'express-session';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '../../');
 
 const router = Router();
 
@@ -17,11 +25,21 @@ interface BlogRequestBody {
     galleryImages?: string[];
 }
 
+// Session verisine özel alan eklemek için tipi genişletelim
+interface CustomSessionData extends SessionData {
+    viewedPosts?: { [key: string]: boolean }; // Örnek: { 'blog-slug': true, 'project-slug': true }
+}
+
 // Tüm blogları getir
 const getAllBlogs: RequestHandler = async (_req, res, next): Promise<void> => {
+    const searchTerm = _req.query.q as string | undefined;
+
     try {
+        const query = searchTerm?.length && searchTerm?.length > 0 
+                        ? ` AND title LIKE '%${searchTerm}%'` 
+                        : "";
         // Blog bilgilerini getir
-        const [rows] = await getDB().execute<RowDataPacket[]>('SELECT * FROM blogs ORDER BY created_at DESC');
+        const [rows] = await getDB().execute<RowDataPacket[]>(`SELECT * FROM blogs WHERE 1=1 ${query} ORDER BY created_at DESC`);
         
         // Her blog için resim bilgilerini getir
         const blogsWithImages = await Promise.all(rows.map(async (blog: RowDataPacket) => {
@@ -132,53 +150,87 @@ const createBlog: RequestHandler<object, object, BlogRequestBody> = async (req, 
 // Blog güncelle
 const updateBlog: RequestHandler<{ id: string }, object, BlogRequestBody> = async (req, res, next): Promise<void> => {
     const { title, content, excerpt, status, plaintext, coverImage, galleryImages } = req.body;
-    const slug = slugify(title, { lower: true });
+    const currentSlug = req.params.id;
+    const newSlug = slugify(title, { lower: true });
 
+    let connection;
     try {
-        // Önce blog ID'sini al
-        const [blogRows] = await getDB().execute<RowDataPacket[]>(
+        connection = await getDB().getConnection();
+        await connection.beginTransaction();
+
+        // Önce blog ID'sini ve mevcut resimleri al
+        const [blogRows] = await connection.execute<RowDataPacket[]>(
             'SELECT id FROM blogs WHERE slug = ?',
-            [req.params.id]
+            [currentSlug]
         );
-        
+
         if (blogRows.length === 0) {
+            await connection.rollback();
+            connection.release();
             res.status(404).json({ message: 'Blog bulunamadı' });
             return;
         }
-        
+
         const blogId = blogRows[0].id;
-        
-        // Blog bilgilerini güncelle
-        const [result] = await getDB().execute<ResultSetHeader>(
+
+        // Silinecek eski resim URL'lerini al
+        const [oldImageRows] = await connection.execute<RowDataPacket[]>(
+            'SELECT image_url FROM blog_images WHERE blog_id = ?',
+            [blogId]
+        );
+        const oldImageUrls: string[] = oldImageRows.map(row => row.image_url);
+
+        // Blog bilgilerini güncelle (yeni slug ile)
+        await connection.execute<ResultSetHeader>(
             'UPDATE blogs SET title = ?, content = ?, excerpt = ?, status = ?, plaintext = ?, slug = ? WHERE id = ?',
-            [title, content, excerpt, status, plaintext, slug, blogId]
+            [title, content, excerpt, status, plaintext, newSlug, blogId]
         );
 
-        // Mevcut resimleri sil
-        await getDB().execute('DELETE FROM blog_images WHERE blog_id = ?', [blogId]);
-        
-        // Kapak resmi varsa kaydet
+        // Mevcut resim kayıtlarını veritabanından sil
+        await connection.execute('DELETE FROM blog_images WHERE blog_id = ?', [blogId]);
+
+        // Yeni kapak resmi varsa kaydet
         if (coverImage) {
-            await getDB().execute(
+            await connection.execute(
                 'INSERT INTO blog_images (blog_id, image_url, type) VALUES (?, ?, ?)',
                 [blogId, coverImage, 'cover']
             );
         }
-        
-        // Galeri resimleri varsa kaydet
+
+        // Yeni galeri resimleri varsa kaydet
         if (galleryImages && galleryImages.length > 0) {
             const galleryValues = galleryImages.map(imageUrl => [blogId, imageUrl, 'gallery']);
-            
             for (const values of galleryValues) {
-                await getDB().execute(
+                await connection.execute(
                     'INSERT INTO blog_images (blog_id, image_url, type) VALUES (?, ?, ?)',
                     values
                 );
             }
         }
-        
+
+        await connection.commit();
+        connection.release();
+
+        // Veritabanı işlemleri başarılı olduktan sonra eski dosyaları sil
+        for (const oldImageUrl of oldImageUrls) {
+            if (oldImageUrl) {
+                const filePath = path.join(projectRoot, 'public', oldImageUrl);
+                try {
+                    await fs.unlink(filePath);
+                } catch (unlinkError: any) {
+                    if (unlinkError.code !== 'ENOENT') {
+                        console.error(`Eski dosya silinemedi (${filePath}):`, unlinkError);
+                    }
+                }
+            }
+        }
+
         res.json({ message: 'Blog başarıyla güncellendi' });
     } catch (error) {
+        if (connection) {
+            await connection.rollback();
+            connection.release();
+        }
         next(error);
     }
 };
@@ -200,10 +252,54 @@ const deleteBlog: RequestHandler<{ id: string }> = async (req, res, next): Promi
     }
 };
 
+// YENİ: Blog görüntüleme sayısını artırma endpoint'i
+const incrementBlogView: RequestHandler<{ slug: string }> = async (req, res, next) => {
+    const slug = req.params.slug;
+    const session = req.session as CustomSessionData; // Tipi genişletilmiş session olarak kullan
+
+    try {
+        // Oturumda bu blog daha önce görüntülenmiş mi kontrol et
+        if (!session.viewedPosts) {
+            session.viewedPosts = {}; // Eğer viewedPosts yoksa oluştur
+        }
+
+        const postKey = `blog-${slug}`;
+        if (session.viewedPosts[postKey]) {
+            // Daha önce görüntülenmiş, sayacı artırma
+            return res.status(200).json({ message: 'Already viewed in this session.' });
+        }
+
+        // Veritabanında sayacı artır
+        const [result] = await getDB().execute<ResultSetHeader>(
+            'UPDATE blogs SET views = views + 1 WHERE slug = ?',
+            [slug]
+        );
+
+        if (result.affectedRows > 0) {
+            // Görüntülendi olarak işaretle
+            session.viewedPosts[postKey] = true;
+            // Oturumu kaydetmeyi zorunlu kıl (isteğe bağlı, store'a göre değişebilir)
+             session.save((err) => {
+                 if (err) {
+                     return next(err);
+                 }
+                 res.status(200).json({ message: 'View count incremented.' });
+             });
+        } else {
+            // Blog bulunamadı veya güncellenemedi
+            res.status(404).json({ message: 'Blog not found or view count could not be updated.' });
+        }
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 router.get('/', getAllBlogs);
 router.get('/:id', getBlogById);
 router.post('/', verifyToken, isAdmin, createBlog);
 router.put('/:id', verifyToken, isAdmin, updateBlog);
 router.delete('/:id',  verifyToken, isAdmin, deleteBlog);
+router.post('/:slug/view', incrementBlogView);
 
 export default router; 

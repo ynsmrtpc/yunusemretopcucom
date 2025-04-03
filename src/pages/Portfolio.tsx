@@ -12,28 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import SEO from '@/components/SEO';
 import { PortfolioSkeleton } from '@/components/skeletons/PortfolioSkeleton';
-
-interface Project {
-    id: number;
-    title: string;
-    description: string;
-    content: string;
-    category: string;
-    technologies: string[];
-    plaintext: string;
-    slug: string;
-    status: string;
-    client: string;
-    duration: string;
-    year: number;
-    live_url: string;
-    github_url: string;
-    views: number | null;
-    created_at: string;
-    updated_at: string;
-    image?: string; // eski alan
-    coverImage?: string; // yeni alan
-}
+import { ProjectList as Project } from '@/types/admin/types';
 
 const Portfolio = () => {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -41,21 +20,21 @@ const Portfolio = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchProjects = async () => {
-            try {
-                const { data } = await projectService.getAll();
-                // data.image = "https://images.pexels.com/photos/30146008/pexels-photo-30146008.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
-
-                setProjects(data);
-            } catch (err: any) {
-                setError('Projeler yüklenirken bir hata oluştu: ' + err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchProjects();
     }, []);
+
+    const fetchProjects = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const { data } = await projectService.getAll();
+            setProjects(data);
+        } catch (err: any) {
+            setError('Projeler yüklenirken bir hata oluştu: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (loading) {
         return <PortfolioSkeleton />;

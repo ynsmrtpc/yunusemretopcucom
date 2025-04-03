@@ -21,7 +21,7 @@ export const SEO = ({
     schemaType,
     schemaData,
 }: SEOProps) => {
-    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.siteadresi.com';
+    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.yunusemretopcu.com';
     const defaultOgImage = `${siteUrl}/og-image.jpg`;
 
     // Temel schema.org yapılandırması

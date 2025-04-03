@@ -8,6 +8,12 @@ import { DataTable } from "@/components/admin/tables/DataTable";
 import { Project, projectColumns } from "@/components/admin/tables/columns";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 
+// Proje durumları için filtre seçenekleri
+const projectStatusOptions = [
+    { label: "Tamamlandı", value: "completed" },
+    { label: "Devam Ediyor", value: "in_progress" },
+];
+
 const AdminPortfolioList = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const navigate = useNavigate();
@@ -73,6 +79,8 @@ const AdminPortfolioList = () => {
                 data={projects}
                 searchKey="title"
                 searchPlaceholder="Başlığa göre ara..."
+                filterColumnKey="status"
+                filterOptions={projectStatusOptions}
             />
         </>
     );
