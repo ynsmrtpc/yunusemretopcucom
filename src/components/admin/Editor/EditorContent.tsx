@@ -6,15 +6,15 @@ const LICENSE_KEY = import.meta.env.VITE_CKEDITOR_LICENSE_KEY;
 
 interface EditorContentProps {
     initialHtml: string;
-    onContentChange: (html: string, text: string, title: string) => void;
+    onContentChange: (html: string, text: string) => void;
 }
 
 const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentChange }) => {
-    const editorContainerRef = useRef(null);
-    const editorMenuBarRef = useRef(null);
-    const editorToolbarRef = useRef(null);
-    const editorRef = useRef(null);
-    const editorWordCountRef = useRef(null);
+    const editorContainerRef = useRef<HTMLDivElement>(null);
+    const editorMenuBarRef = useRef<HTMLDivElement>(null);
+    const editorToolbarRef = useRef<HTMLDivElement>(null);
+    const editorRef = useRef<HTMLDivElement>(null);
+    const editorWordCountRef = useRef<HTMLDivElement>(null);
     const [isLayoutReady, setIsLayoutReady] = useState(false);
     const cloud = useCKEditorCloud({ version: '44.3.0', premium: false, translations: ['tr'] });
 
@@ -74,12 +74,10 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
             LinkImage,
             List,
             ListProperties,
-            Markdown,
             MediaEmbed,
             Mention,
             PageBreak,
             Paragraph,
-            PasteFromMarkdownExperimental,
             PasteFromOffice,
             RemoveFormat,
             ShowBlocks,
@@ -190,12 +188,10 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
                     LinkImage,
                     List,
                     ListProperties,
-                    Markdown,
                     MediaEmbed,
                     Mention,
                     PageBreak,
                     Paragraph,
-                    PasteFromMarkdownExperimental,
                     PasteFromOffice,
                     RemoveFormat,
                     ShowBlocks,
@@ -219,7 +215,6 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
                     TableToolbar,
                     TextPartLanguage,
                     TextTransformation,
-                    Title,
                     TodoList,
                     Underline,
                     WordCount
@@ -316,7 +311,6 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
                         'resizeImage'
                     ]
                 },
-
                 initialData: initialHtml,
                 language: 'tr',
                 licenseKey: LICENSE_KEY,
@@ -351,8 +345,10 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
                 menuBar: {
                     isVisible: true
                 },
-
                 placeholder: 'İçeriği buraya yazınız!',
+                title: {
+                    placeholder: ''
+                },
                 style: {
                     definitions: [
                         {
@@ -410,7 +406,18 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
                 }
             }
         };
-    }, [cloud, isLayoutReady]);
+    }, [cloud, isLayoutReady, initialHtml]);
+
+    const getTextFromHtml = (html: string): string => {
+        try {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            return div.textContent || div.innerText || '';
+        } catch (e) {
+            console.error("Error extracting text from HTML:", e);
+            return '';
+        }
+    };
 
     return (
         <div
@@ -425,7 +432,7 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
                         <div ref={editorRef}>
                             {DecoupledEditor && editorConfig && (
                                 <CKEditor
-                                    onReady={editor => {
+                                    onReady={(editor: any) => {
                                         const wordCount = editor.plugins.get('WordCount');
                                         editorWordCountRef.current?.appendChild(wordCount.wordCountContainer);
                                         editorToolbarRef.current?.appendChild(editor.ui.view.toolbar.element);
@@ -436,19 +443,14 @@ const EditorContent: React.FC<EditorContentProps> = ({ initialHtml, onContentCha
                                         editorToolbarRef.current?.replaceChildren();
                                         editorMenuBarRef.current?.replaceChildren();
                                     }}
-                                    onChange={(_, editor) => {
-                                        const htmlData = editor.editing.view.getDomRoot().innerHTML;
-                                        const textData = editor.editing.view.getDomRoot().innerText;
-
-                                        const titlePlugin = editor.plugins.get('Title');
-                                        const title = titlePlugin ? titlePlugin.getTitle() : '';
-
-
-                                        // Üst bileşene içeriği gönder
-                                        onContentChange({ title, htmlData, textData });
+                                    onChange={(event: any, editor: any) => {
+                                        const htmlData = editor.getData() || '';
+                                        const textData = getTextFromHtml(htmlData);
+                                        onContentChange(htmlData, textData);
                                     }}
                                     editor={DecoupledEditor}
                                     config={editorConfig}
+                                    data={initialHtml}
                                 />
                             )}
                         </div>

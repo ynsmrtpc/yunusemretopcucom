@@ -140,22 +140,26 @@ const getBlogById: RequestHandler<{ id: string }> = async (req, res, next): Prom
 
 // Yeni blog ekle
 const createBlog: RequestHandler<object, object, BlogRequestBody> = async (req, res, next): Promise<void> => {
-    const { content, excerpt, status, coverImage, galleryImages } = req.body;
-        
-    if(!content) {
-        res.json({ message: 'Bir hata oluştu' });
+    // req.body'den alanları doğru şekilde al
+    const { title, content, plaintext, excerpt, status, coverImage, galleryImages } = req.body;
+
+    // Gerekli alanları kontrol et (title, content, plaintext backend'de de kontrol edilebilir)
+    if (!title || !content || !plaintext || !excerpt || !status) {
+        return res.status(400).json({ message: 'Eksik alanlar var.' });
     }
-    
-    const {title, htmlData,textData} = content;
-    const slug = slugify(title, { lower: true });
-    
+
+    // Slug oluştur
+    const slug = slugify(title, { lower: true, strict: true, remove: /[*+~.()'"!:@]/g });
+    // TODO: slug benzersizliğini kontrol et (opsiyonel ama önerilir)
+
     try {
         // Blog kaydını oluştur
         const [result] = await getDB().execute<ResultSetHeader>(
             'INSERT INTO blogs (title, content, plaintext, excerpt, status, slug) VALUES (?, ?, ?, ?, ?, ?)',
-            [title, htmlData, textData, excerpt, status, slug]
+            // Doğru parametreleri gönder
+            [title, content, plaintext, excerpt, status, slug]
         );
-        
+
         const blogId = result.insertId;
         
         // Kapak resmi varsa kaydet
@@ -178,24 +182,28 @@ const createBlog: RequestHandler<object, object, BlogRequestBody> = async (req, 
             }
         }
         
-        res.status(201).json({ id: blogId, message: 'Blog başarıyla oluşturuldu' });
+        res.status(201).json({ id: blogId, slug: slug, message: 'Blog başarıyla oluşturuldu' });
     } catch (error) {
+        // Hata durumunda slug çakışması olabilir mi kontrol et
+        if (error.code === 'ER_DUP_ENTRY') {
+           return res.status(409).json({ message: 'Bu başlıkta bir blog zaten var. Lütfen farklı bir başlık deneyin.' });
+        }
         next(error);
     }
 };
 
 // Blog güncelle
 const updateBlog: RequestHandler<{ id: string }, object, BlogRequestBody> = async (req, res, next): Promise<void> => {
-    const { content, excerpt, status, coverImage, galleryImages } = req.body;
-    
-    if(!content) {
-        res.json({ message: 'Bir hata oluştu' });
+    const { title, content, plaintext, excerpt, status, coverImage, galleryImages } = req.body;
+    const currentSlug = req.params.id; // Güncellenecek blog'un mevcut slug'ı
+
+    // Gerekli alanları kontrol et
+    if (!title || !content || !plaintext || !excerpt || !status) {
+        return res.status(400).json({ message: 'Eksik alanlar var.' });
     }
 
-    const {title, htmlData, textData} = content;
-    const currentSlug = req.params.id;
- 
-    const newSlug = slugify(title, { lower: true });
+    // Slug güncellemesi yapmayacağız, mevcut slug kullanılacak.
+    // const newSlug = slugify(title, { lower: true }); 
 
     let connection;
     try {
@@ -224,10 +232,13 @@ const updateBlog: RequestHandler<{ id: string }, object, BlogRequestBody> = asyn
         );
         const oldImageUrls: string[] = oldImageRows.map(row => row.image_url);
 
-        // Blog bilgilerini güncelle (yeni slug ile)
+        // Blog bilgilerini güncelle (slug HARİÇ)
         await connection.execute<ResultSetHeader>(
-            'UPDATE blogs SET title = ?, content = ?, excerpt = ?, status = ?, plaintext = ?, slug = ? WHERE id = ?',
-            [title, htmlData, excerpt, status, textData, newSlug, blogId]
+            // 'UPDATE blogs SET title = ?, content = ?, excerpt = ?, status = ?, plaintext = ?, slug = ? WHERE id = ?',
+            'UPDATE blogs SET title = ?, content = ?, plaintext = ?, excerpt = ?, status = ? WHERE id = ?',
+            // newSlug parametresini kaldır
+            // [title, content, excerpt, status, plaintext, newSlug, blogId]
+            [title, content, plaintext, excerpt, status, blogId]
         );
 
         // Mevcut resim kayıtlarını veritabanından sil
@@ -269,7 +280,8 @@ const updateBlog: RequestHandler<{ id: string }, object, BlogRequestBody> = asyn
             }
         }
 
-        res.json({ message: 'Blog başarıyla güncellendi' });
+        // Güncellenen blogun slug'ını döndür (değişmedi ama yine de gönderelim)
+        res.json({ slug: currentSlug, message: 'Blog başarıyla güncellendi' }); 
     } catch (error) {
         if (connection) {
             await connection.rollback();

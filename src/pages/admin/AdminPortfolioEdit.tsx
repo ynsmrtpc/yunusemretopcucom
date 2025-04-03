@@ -19,14 +19,13 @@ import EditorContent from "@/components/admin/Editor/EditorContent";
 interface ContentProps {
     htmlData: string;
     textData: string;
-    title: string;
 }
 
 const AdminPortfolioEdit = () => {
     const { id: slug } = useParams<{ id: string }>();
     const isEditing = Boolean(slug);
     const navigate = useNavigate();
-    const [contentValues, setContentValues] = useState<ContentProps>({ htmlData: '', textData: '', title: '' });
+    const [contentValues, setContentValues] = useState<ContentProps>({ htmlData: '', textData: '' });
     const [loading, setLoading] = useState(true);
     const [project, setProject] = useState<ProjectPost | null>(null);
 
@@ -43,6 +42,10 @@ const AdminPortfolioEdit = () => {
         try {
             const response = await projectService.getById(projectSlug);
             setProject(response.data);
+            setContentValues({
+                htmlData: response.data.content || '',
+                textData: response.data.plaintext || ''
+            });
         } catch (error) {
             console.error("Error fetching project:", error);
             toast.error("Proje verisi alınamadı.");
@@ -51,7 +54,7 @@ const AdminPortfolioEdit = () => {
         }
     };
 
-    const initialValues: ProjectPost = {
+    const initialValues: Omit<ProjectPost, 'content' | 'plaintext'> = {
         title: project?.title || "",
         description: project?.description || "",
         category: project?.category || "",
@@ -62,10 +65,9 @@ const AdminPortfolioEdit = () => {
         year: project?.year || "",
         live_url: project?.live_url || "",
         github_url: project?.github_url || "",
-        content: project?.content || "",
-        plaintext: project?.plaintext || "",
         coverImage: project?.coverImage || "",
         galleryImages: project?.galleryImages || [],
+        slug: project?.slug || "",
     };
 
     // const validationSchema = Yup.object({
@@ -85,20 +87,19 @@ const AdminPortfolioEdit = () => {
         { setSubmitting }: FormikHelpers<ProjectPost>
     ) => {
         try {
-            // Form gönderilmeden önce yükleme durumunu göster
             toast.loading("Proje kaydediliyor...");
 
-            // Editor içeriğini al
             const content = contentValues.htmlData || "";
             const plaintext = contentValues.textData || "";
-            const title = contentValues.title || "";
 
-            // Form değerlerini güncelle
-            let payload: ProjectPost = { ...values, content, plaintext, title };
+            let payload: ProjectPost = {
+                ...values,
+                content,
+                plaintext
+            };
 
-            // Dosya yükleme işlemlerini gerçekleştir
             payload = await processFormImages(payload);
-            // API'ye gönder
+
             let result;
             if (isEditing) {
                 result = await projectService.update(slug!, payload);
@@ -108,7 +109,6 @@ const AdminPortfolioEdit = () => {
 
             const { message } = result.data || "";
 
-            // Yükleme toast'ını kapat
             toast.dismiss();
 
             if (result.status === 200 || result.status === 201) {
@@ -118,7 +118,6 @@ const AdminPortfolioEdit = () => {
                 toast.error(message);
             }
         } catch (error) {
-            // Yükleme toast'ını kapat
             toast.dismiss();
 
             console.error("Error submitting form:", error);
@@ -136,11 +135,10 @@ const AdminPortfolioEdit = () => {
         );
     }
 
-
     return (
         <Formik
             enableReinitialize
-            initialValues={initialValues}
+            initialValues={initialValues as any}
             // validationSchema={validationSchema}
             onSubmit={handleSubmit}
         >
@@ -163,22 +161,16 @@ const AdminPortfolioEdit = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Ana İçerik */}
                         <div className="lg:col-span-2 space-y-8">
-                            {/* <div className="space-y-2">
-                                <TextField name="title" label="Başlık" required />
-                            </div> */}
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">İçerik</label>
-                                <div className="relative min-h-[500px] border rounded-lg">
-                                    {!loading && (
-                                        <EditorContent
-                                            initialHtml={project?.content || ''}
-                                            onContentChange={(htmlData, textData, title) => {
-                                                setContentValues({ htmlData, textData, title });
-                                            }}
-                                        />
-                                    )}
-                                </div>
+                            <TextField name="title" label="Proje Başlığı" required />
+                            <div className="relative min-h-[500px] border rounded-lg">
+                                {!loading && (
+                                    <EditorContent
+                                        initialHtml={project?.content || ''}
+                                        onContentChange={(htmlData, textData) => {
+                                            setContentValues({ htmlData, textData });
+                                        }}
+                                    />
+                                )}
                             </div>
                         </div>
 

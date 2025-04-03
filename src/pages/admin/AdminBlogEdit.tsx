@@ -13,18 +13,18 @@ import ImageUpload from "@/components/admin/formElements/ImageUpload";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import EditorContent from "@/components/admin/Editor/EditorContent";
 import { processFormImages } from "@/utils/uploadHelpers";
+import TextField from "@/components/admin/formElements/TextField";
 
 interface ContentProps {
     htmlData: string;
     textData: string;
-    title: string;
 }
 
 const AdminBlogEdit: React.FC = () => {
     const { id: slug } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const isEditing = Boolean(slug);
-    const [contentValues, setContentValues] = useState<ContentProps>({ htmlData: '', textData: '', title: '' });
+    const [contentValues, setContentValues] = useState<ContentProps>({ htmlData: '', textData: '' });
     const [loading, setLoading] = useState(true);
     const [blog, setBlog] = useState<BlogPost | null>(null);
 
@@ -41,6 +41,10 @@ const AdminBlogEdit: React.FC = () => {
         try {
             const response = await blogService.getById(blogSlug);
             setBlog(response.data);
+            setContentValues({
+                htmlData: response.data.content || '',
+                textData: response.data.plaintext || ''
+            });
         } catch (error) {
             console.error("Error fetching blog:", error);
             toast.error("Blog verisi alınamadı.");
@@ -55,21 +59,19 @@ const AdminBlogEdit: React.FC = () => {
         { setSubmitting }: FormikHelpers<BlogPost>
     ) => {
         try {
-            // Form gönderilmeden önce yükleme durumunu göster
             toast.loading("Blog kaydediliyor...");
 
-            // Editor içeriğini al
             const content = contentValues.htmlData || "";
             const plaintext = contentValues.textData || "";
-            const title = contentValues.title || "";
 
-            // Form değerlerini güncelle
-            let payload: BlogPost = { ...values, content, plaintext, title };
+            let payload: BlogPost = {
+                ...values,
+                content,
+                plaintext
+            };
 
-            // Dosya yükleme işlemlerini gerçekleştir
             payload = await processFormImages(payload);
 
-            //API'ye gönder
             let result;
             if (isEditing) {
                 result = await blogService.update(slug!, payload);
@@ -79,7 +81,6 @@ const AdminBlogEdit: React.FC = () => {
 
             const { message } = result.data || '';
 
-            // Yükleme toast'ını kapat
             toast.dismiss();
 
             if (result.status === 200 || result.status === 201) {
@@ -89,7 +90,6 @@ const AdminBlogEdit: React.FC = () => {
                 toast.error(message);
             }
         } catch (error) {
-            // Yükleme toast'ını kapat
             toast.dismiss();
 
             console.error("Error submitting form:", error);
@@ -107,24 +107,21 @@ const AdminBlogEdit: React.FC = () => {
         );
     }
 
-    const initialValues: BlogPost = {
+    const initialValues: Omit<BlogPost, 'content' | 'plaintext'> = {
         title: blog?.title || "",
         excerpt: blog?.excerpt || "",
         status: blog?.status || "draft",
-        content: blog?.content || "",
         image: blog?.image || "",
-        plaintext: blog?.plaintext || "",
         coverImage: blog?.coverImage || "",
         galleryImages: blog?.galleryImages || [],
     };
 
 
     return (
-        <Formik initialValues={initialValues} onSubmit={handleSubmit} enableReinitialize>
+        <Formik initialValues={initialValues as any} onSubmit={handleSubmit} enableReinitialize>
             {
                 ({ isSubmitting, setFieldValue, values }) => (
                     <Form className="space-y-8">
-                        {/* Header */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <Link to="/admin/blog">
@@ -140,15 +137,14 @@ const AdminBlogEdit: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            {/* Main Content */}
                             <div className="lg:col-span-2 space-y-8">
-                                {/* <TextField name="title" label="Başlık" required /> */}
+                                <TextField name="title" label="Başlık" required />
                                 <div className="relative min-h-[500px] border rounded-lg">
                                     {!loading && (
                                         <EditorContent
                                             initialHtml={blog?.content || ''}
-                                            onContentChange={(htmlData, textData, title) => {
-                                                setContentValues({ htmlData, textData, title });
+                                            onContentChange={(htmlData, textData) => {
+                                                setContentValues({ htmlData, textData });
                                             }}
                                         />
                                     )}
@@ -156,7 +152,6 @@ const AdminBlogEdit: React.FC = () => {
 
                             </div>
 
-                            {/* Sidebar */}
                             <div className="space-y-6">
                                 <TextAreaField name="excerpt" label="Özet" rows={3} required />
                                 <SelectField
@@ -169,7 +164,6 @@ const AdminBlogEdit: React.FC = () => {
                                 />
 
 
-                                {/* Kapak Resmi */}
                                 <ImageUpload
                                     label="Kapak Resmi"
                                     name="coverImage"
@@ -177,7 +171,6 @@ const AdminBlogEdit: React.FC = () => {
                                     onChange={(name, value) => setFieldValue(name, value)}
                                 />
 
-                                {/* Galeri Resimleri */}
                                 <ImageUpload
                                     label="Galeri Resimleri"
                                     name="galleryImages"
