@@ -138,10 +138,8 @@ const getProjectById: RequestHandler<{ id: string }> = async (req: Request<{ id:
 
 // Yeni proje ekle
 const createProject: RequestHandler<object, object, ProjectRequestBody> = async (req: Request<object, object, ProjectRequestBody>, res: Response, next: NextFunction): Promise<void> => {
-    const { 
-        category, client, content, description, duration, github_url, live_url, 
-        plaintext, status, technologies, title, year, coverImage, galleryImages 
-    } = req.body;
+    const { category, client, content, description, duration, github_url, live_url, status, technologies, year, coverImage, galleryImages } = req.body;
+    const {title, htmlData, textData} = content;
     
     const slug = slugify(title, { lower: true });
     const technologiesArray = (typeof technologies === "string" )? technologies.split(',').map((tech: string) => tech.trim()) : technologies;
@@ -150,7 +148,7 @@ const createProject: RequestHandler<object, object, ProjectRequestBody> = async 
         // Proje kaydını oluştur
         const [result] = await getDB().execute<ResultSetHeader>(
             'INSERT INTO projects (category, client, content, description, duration, github_url, live_url, plaintext, status, technologies, title, year, slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [category, client, content, description, duration, github_url, live_url, plaintext, status, JSON.stringify(technologiesArray), title, year, slug]
+            [category, client, htmlData, description, duration, github_url, live_url, textData, status, JSON.stringify(technologiesArray), title, year, slug]
         );
         
         const projectId = result.insertId;
@@ -185,8 +183,9 @@ const createProject: RequestHandler<object, object, ProjectRequestBody> = async 
 const updateProject: RequestHandler<{ id: string }, object, ProjectRequestBody> = async (req: Request<{ id: string }, object, ProjectRequestBody>, res: Response, next: NextFunction): Promise<void> => {
     const { 
         category, client, content, description, duration, github_url, live_url, 
-        plaintext, status, technologies, title, year, coverImage, galleryImages 
+        status, technologies, year, coverImage, galleryImages 
     } = req.body;
+    const {title, htmlData, textData} = content;
     
     const currentSlug = req.params.id;
     const newSlug = slugify(title, { lower: true });
@@ -222,7 +221,7 @@ const updateProject: RequestHandler<{ id: string }, object, ProjectRequestBody> 
         // Proje bilgilerini güncelle (yeni slug ile)
         await connection.execute<ResultSetHeader>(
             'UPDATE projects SET category = ?, client = ?, content = ?, description = ?, duration = ?, github_url = ?, live_url = ?, plaintext = ?, status = ?, technologies = ?, title = ?, year = ?, slug = ? WHERE id = ?',
-            [category, client, content, description, duration, github_url, live_url, plaintext, status, JSON.stringify(technologiesArray), title, year, newSlug, projectId]
+            [category, client, htmlData, description, duration, github_url, live_url, textData, status, JSON.stringify(technologiesArray), title, year, newSlug, projectId]
         );
         
         // Mevcut resim kayıtlarını veritabanından sil
@@ -283,7 +282,7 @@ const deleteProject: RequestHandler<{ id: string }> = async (req: Request<{ id: 
         await connection.beginTransaction();
 
         // Silinecek proje ID'sini al
-        const [projectRows] = await connection.execute<RowDataPacket[]>('SELECT id FROM projects WHERE slug = ?', [req.params.id]);
+        const [projectRows] = await connection.execute<RowDataPacket[]>('SELECT id FROM projects WHERE id = ?', [req.params.id]);
 
         if (projectRows.length === 0) {
             await connection.rollback();

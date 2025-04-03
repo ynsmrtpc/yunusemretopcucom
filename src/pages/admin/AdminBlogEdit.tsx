@@ -49,16 +49,7 @@ const AdminBlogEdit: React.FC = () => {
         }
     };
 
-    const initialValues: BlogPost = {
-        title: blog?.title || "",
-        excerpt: blog?.excerpt || "",
-        status: blog?.status || "draft",
-        content: blog?.content || "",
-        image: blog?.image || "",
-        plaintext: blog?.plaintext || "",
-        coverImage: blog?.coverImage || "",
-        galleryImages: blog?.galleryImages || [],
-    };
+
     const handleSubmit = async (
         values: BlogPost,
         { setSubmitting }: FormikHelpers<BlogPost>
@@ -115,6 +106,17 @@ const AdminBlogEdit: React.FC = () => {
             </div>
         );
     }
+
+    const initialValues: BlogPost = {
+        title: blog?.title || "",
+        excerpt: blog?.excerpt || "",
+        status: blog?.status || "draft",
+        content: blog?.content || "",
+        image: blog?.image || "",
+        plaintext: blog?.plaintext || "",
+        coverImage: blog?.coverImage || "",
+        galleryImages: blog?.galleryImages || [],
+    };
 
 
     return (

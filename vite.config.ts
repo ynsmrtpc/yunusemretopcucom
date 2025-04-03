@@ -12,9 +12,9 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/sitemap.xml': 'http://localhost:5000',
-      '/rss': 'http://localhost:5000',
-      '/robots.txt': 'http://localhost:5000'
+      '/sitemap.xml': 'https://yunusemretopcu.com',
+      '/rss': 'https://yunusemretopcu.com',
+      '/robots.txt': 'https://yunusemretopcu.com'
     }
   }
 })

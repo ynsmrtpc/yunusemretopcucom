@@ -140,14 +140,20 @@ const getBlogById: RequestHandler<{ id: string }> = async (req, res, next): Prom
 
 // Yeni blog ekle
 const createBlog: RequestHandler<object, object, BlogRequestBody> = async (req, res, next): Promise<void> => {
-    const { title, content, excerpt, status, plaintext, coverImage, galleryImages } = req.body;
+    const { content, excerpt, status, coverImage, galleryImages } = req.body;
+        
+    if(!content) {
+        res.json({ message: 'Bir hata oluştu' });
+    }
+    
+    const {title, htmlData,textData} = content;
     const slug = slugify(title, { lower: true });
     
     try {
         // Blog kaydını oluştur
         const [result] = await getDB().execute<ResultSetHeader>(
             'INSERT INTO blogs (title, content, plaintext, excerpt, status, slug) VALUES (?, ?, ?, ?, ?, ?)',
-            [title, content, plaintext, excerpt, status, slug]
+            [title, htmlData, textData, excerpt, status, slug]
         );
         
         const blogId = result.insertId;
@@ -180,8 +186,15 @@ const createBlog: RequestHandler<object, object, BlogRequestBody> = async (req, 
 
 // Blog güncelle
 const updateBlog: RequestHandler<{ id: string }, object, BlogRequestBody> = async (req, res, next): Promise<void> => {
-    const { title, content, excerpt, status, plaintext, coverImage, galleryImages } = req.body;
+    const { content, excerpt, status, coverImage, galleryImages } = req.body;
+    
+    if(!content) {
+        res.json({ message: 'Bir hata oluştu' });
+    }
+
+    const {title, htmlData, textData} = content;
     const currentSlug = req.params.id;
+ 
     const newSlug = slugify(title, { lower: true });
 
     let connection;
@@ -214,7 +227,7 @@ const updateBlog: RequestHandler<{ id: string }, object, BlogRequestBody> = asyn
         // Blog bilgilerini güncelle (yeni slug ile)
         await connection.execute<ResultSetHeader>(
             'UPDATE blogs SET title = ?, content = ?, excerpt = ?, status = ?, plaintext = ?, slug = ? WHERE id = ?',
-            [title, content, excerpt, status, plaintext, newSlug, blogId]
+            [title, htmlData, excerpt, status, textData, newSlug, blogId]
         );
 
         // Mevcut resim kayıtlarını veritabanından sil
