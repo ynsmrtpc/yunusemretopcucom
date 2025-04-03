@@ -26,7 +26,7 @@ const AdminBlogList = () => {
     const fetchBlogs = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/blogs?limit=99999');
+            const response = await api.get('/blogs?showDraft=true&limit=99999');
             setBlogs(response.data.blogs);
             setLoading(false);
         } catch (error) {

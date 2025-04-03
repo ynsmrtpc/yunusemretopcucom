@@ -33,6 +33,7 @@ interface CustomSessionData extends SessionData {
 // Tüm blogları getir (arama ve sayfalama özelliği ile)
 const getAllBlogs: RequestHandler = async (req, res, next): Promise<void> => {
     const searchTerm = req.query.q as string | undefined;
+    const showDraft = req.query.showDraft as boolean | false;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 9;
     const offset = (page - 1) * limit;
@@ -43,15 +44,18 @@ const getAllBlogs: RequestHandler = async (req, res, next): Promise<void> => {
         // params artık sadece arama terimlerini içerecek (string[])
         const params: string[] = []; 
         const countParams: string[] = [];
+        const statusClause = showDraft ? "": " and status = 'published' "; 
+        let whereClause = " WHERE 1=1 " + statusClause;
 
         if (searchTerm) {
-            const whereClause = ' WHERE title LIKE ? OR content LIKE ? OR plaintext LIKE ? OR excerpt LIKE ?';
-            query += whereClause;
-            countQuery += whereClause;
+            whereClause += ' and (title LIKE ? OR excerpt LIKE ?)';
             const likeTerm = `%${searchTerm}%`;
-            params.push(likeTerm, likeTerm, likeTerm, likeTerm);
-            countParams.push(likeTerm, likeTerm, likeTerm, likeTerm);
+            params.push(likeTerm, likeTerm);
+            countParams.push(likeTerm, likeTerm);
         }
+
+        query += whereClause;
+        countQuery += whereClause;
 
         // Sıralama ve Limit/Offset ekle (doğrudan string içine)
         // Güvenlik Notu: limit ve offset parseInt ile alındığı için risk düşük.

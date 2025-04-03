@@ -30,8 +30,8 @@ const SearchResults: React.FC = () => {
                     api.get('/blogs', { params: { q: query } }),
                     api.get('/projects', { params: { q: query } })
                 ]);
-                setBlogResults(blogResponse.data);
-                setProjectResults(projectResponse.data);
+                setBlogResults(blogResponse.data.blogs);
+                setProjectResults(projectResponse.data.projects);
             } catch (err: any) {
                 console.error("Arama sonuçları alınırken hata:", err);
                 setError('Arama sonuçları yüklenirken bir hata oluştu: ' + err.message);
