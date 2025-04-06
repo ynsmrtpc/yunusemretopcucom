@@ -243,19 +243,9 @@ export const Home = () => {
                                         />
                                     </div>
                                     <div className="p-6 flex-1">
-                                        <h3 className="text-xl font-bold mb-2">{project.title}</h3>
-                                        <p className="text-muted-foreground mb-4">
-                                            {project.description}
-                                        </p>
+                                        <h3 className="text-center text-xl font-bold mb-2">{project.title}</h3>
                                     </div>
                                     <div className="p-6 pt-0">
-                                        <div className="flex flex-wrap gap-2 mb-4">
-                                            {project.technologies.map((tech, index) => (
-                                                <span key={index} className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm">
-                                                    {tech}
-                                                </span>
-                                            ))}
-                                        </div>
                                         <Link to={`/portfolio/${project.slug}`}>
                                             <Button variant="outline" className="w-full rounded-full">
                                                 Detayları Görüntüle
