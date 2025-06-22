@@ -27,6 +27,10 @@ const AdminAbout = () => {
     const fetchAbout = async () => {
         try {
             const response = await aboutService.get();
+            response.data.skills = JSON.parse(response.data.skills);
+            response.data.experience = JSON.parse(response.data.experience);
+            response.data.education = JSON.parse(response.data.education);
+            response.data.certifications = JSON.parse(response.data.certifications);
             setAboutData(response.data);
             setAboutContentValues({
                 html: response.data.content || '',
@@ -51,6 +55,7 @@ const AdminAbout = () => {
     }
 
     const initialValues: Omit<AboutData, 'content' | 'plaintext'> = {
+        id: aboutData.id,
         skills: aboutData?.skills || [""],
         experience: aboutData?.experience || [],
         education: aboutData?.education || [],

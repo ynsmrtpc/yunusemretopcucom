@@ -22,8 +22,8 @@ const router = Router();
 interface ProjectRequestBody {
     title: string;
     description: string;
-    liveUrl: string;
-    githubUrl: string;
+    live_url: string;
+    github_url: string;
     technologies: string | string[];
     plaintext: string;
     category: string;
@@ -139,7 +139,7 @@ const getProjectById: RequestHandler<{ id: string }> = async (req: Request<{ id:
 // Yeni proje ekle
 const createProject: RequestHandler<object, object, ProjectRequestBody> = async (req: Request<object, object, ProjectRequestBody>, res: Response, next: NextFunction): Promise<void> => {
     const { 
-        title, description, category, client, content, duration, githubUrl, liveUrl, 
+        title, description, category, client, content, duration, github_url, live_url, 
         plaintext, status, technologies, year, coverImage, galleryImages 
     } = req.body;
     
@@ -151,9 +151,13 @@ const createProject: RequestHandler<object, object, ProjectRequestBody> = async 
     const technologiesArray = (typeof technologies === "string" )? technologies.split(',').map((tech: string) => tech.trim()) : technologies;
 
     try {
+        const params = [
+            title, description, category, client, content, duration, github_url, live_url, plaintext, status, JSON.stringify(technologiesArray), year, slug
+        ].map(param => param === undefined ? null : param);
+
         const [result] = await getDB().execute<ResultSetHeader>(
-            'INSERT INTO projects (title, description, category, client, content, duration, githubUrl, liveUrl, plaintext, status, technologies, year, slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [title, description, category, client, content, duration, githubUrl, liveUrl, plaintext, status, JSON.stringify(technologiesArray), year, slug]
+            'INSERT INTO projects (title, description, category, client, content, duration, github_url, live_url, plaintext, status, technologies, year, slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            params
         );
         
         const projectId = result.insertId;
@@ -190,10 +194,9 @@ const createProject: RequestHandler<object, object, ProjectRequestBody> = async 
 // Proje güncelle
 const updateProject: RequestHandler<{ id: string }, object, ProjectRequestBody> = async (req: Request<{ id: string }, object, ProjectRequestBody>, res: Response, next: NextFunction): Promise<void> => {
     const { 
-        title, description, category, client, content, duration, githubUrl, liveUrl, 
+        title, description, category, client, content, duration, github_url, live_url, 
         plaintext, status, technologies, year, coverImage, galleryImages 
     } = req.body;
-    
     const currentSlug = req.params.id;
     const technologiesArray = (typeof technologies === "string" )? technologies.split(',').map((tech: string) => tech.trim()) : technologies;
     
@@ -227,11 +230,15 @@ const updateProject: RequestHandler<{ id: string }, object, ProjectRequestBody> 
             [projectId]
         );
         const oldImageUrls: string[] = oldImageRows.map((row: RowDataPacket) => row.image_url);
-        
+
+        const params = [
+            title, description, category, client, content, duration, github_url, live_url, plaintext, status, JSON.stringify(technologiesArray), year, projectId
+        ].map(param => param === undefined ? null : param);
+
         // Proje bilgilerini güncelle (slug HARİÇ, sütun isimleri düzeltildi)
         await connection.execute<ResultSetHeader>(
-            'UPDATE projects SET title = ?, description = ?, category = ?, client = ?, content = ?, duration = ?, githubUrl = ?, liveUrl = ?, plaintext = ?, status = ?, technologies = ?, year = ? WHERE id = ?',
-            [title, description, category, client, content, duration, githubUrl, liveUrl, plaintext, status, JSON.stringify(technologiesArray), year, projectId]
+            'UPDATE projects SET title = ?, description = ?, category = ?, client = ?, content = ?, duration = ?, github_url = ?, live_url = ?, plaintext = ?, status = ?, technologies = ?, year = ? WHERE id = ?',
+            params
         );
         
         // Mevcut resim kayıtlarını veritabanından sil

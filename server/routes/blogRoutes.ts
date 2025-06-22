@@ -195,22 +195,17 @@ const createBlog: RequestHandler<object, object, BlogRequestBody> = async (req, 
 // Blog güncelle
 const updateBlog: RequestHandler<{ id: string }, object, BlogRequestBody> = async (req, res, next): Promise<void> => {
     const { title, content, plaintext, excerpt, status, coverImage, galleryImages } = req.body;
-    const currentSlug = req.params.id; // Güncellenecek blog'un mevcut slug'ı
+    const currentSlug = req.params.id;
 
-    // Gerekli alanları kontrol et
     if (!title || !content || !plaintext || !excerpt || !status) {
         return res.status(400).json({ message: 'Eksik alanlar var.' });
     }
-
-    // Slug güncellemesi yapmayacağız, mevcut slug kullanılacak.
-    // const newSlug = slugify(title, { lower: true }); 
 
     let connection;
     try {
         connection = await getDB().getConnection();
         await connection.beginTransaction();
 
-        // Önce blog ID'sini ve mevcut resimleri al
         const [blogRows] = await connection.execute<RowDataPacket[]>(
             'SELECT id FROM blogs WHERE slug = ?',
             [currentSlug]
@@ -225,63 +220,97 @@ const updateBlog: RequestHandler<{ id: string }, object, BlogRequestBody> = asyn
 
         const blogId = blogRows[0].id;
 
-        // Silinecek eski resim URL'lerini al
-        const [oldImageRows] = await connection.execute<RowDataPacket[]>(
-            'SELECT image_url FROM blog_images WHERE blog_id = ?',
-            [blogId]
-        );
-        const oldImageUrls: string[] = oldImageRows.map(row => row.image_url);
-
-        // Blog bilgilerini güncelle (slug HARİÇ)
+        // Blog bilgilerini güncelle
         await connection.execute<ResultSetHeader>(
-            // 'UPDATE blogs SET title = ?, content = ?, excerpt = ?, status = ?, plaintext = ?, slug = ? WHERE id = ?',
             'UPDATE blogs SET title = ?, content = ?, plaintext = ?, excerpt = ?, status = ? WHERE id = ?',
-            // newSlug parametresini kaldır
-            // [title, content, excerpt, status, plaintext, newSlug, blogId]
             [title, content, plaintext, excerpt, status, blogId]
         );
 
-        // Mevcut resim kayıtlarını veritabanından sil
-        await connection.execute('DELETE FROM blog_images WHERE blog_id = ?', [blogId]);
+        // Kapak resmini güncelle (eğer yeni bir coverImage gönderildiyse)
+        if (coverImage !== undefined && coverImage !== null && coverImage !== '') {
+            // Eski kapak resmini al
+            const [oldCoverRows] = await connection.execute<RowDataPacket[]>(
+                'SELECT image_url FROM blog_images WHERE blog_id = ? AND type = ?',
+                [blogId, 'cover']
+            );
 
-        // Yeni kapak resmi varsa kaydet
-        if (coverImage) {
+            const oldCoverUrls: string[] = oldCoverRows.map(row => row.image_url);
+
+            // Eski kapak resmini sil
+            await connection.execute('DELETE FROM blog_images WHERE blog_id = ? AND type = ?', [blogId, 'cover']);
+
+            // Yeni kapak resmini ekle
             await connection.execute(
                 'INSERT INTO blog_images (blog_id, image_url, type) VALUES (?, ?, ?)',
                 [blogId, coverImage, 'cover']
             );
-        }
 
-        // Yeni galeri resimleri varsa kaydet
-        if (galleryImages && galleryImages.length > 0) {
-            const galleryValues = galleryImages.map(imageUrl => [blogId, imageUrl, 'gallery']);
-            for (const values of galleryValues) {
-                await connection.execute(
-                    'INSERT INTO blog_images (blog_id, image_url, type) VALUES (?, ?, ?)',
-                    values
-                );
-            }
-        }
-
-        await connection.commit();
-        connection.release();
-
-        // Veritabanı işlemleri başarılı olduktan sonra eski dosyaları sil
-        for (const oldImageUrl of oldImageUrls) {
-            if (oldImageUrl) {
-                const filePath = path.join(projectRoot, 'public', oldImageUrl);
-                try {
-                    await fs.unlink(filePath);
-                } catch (unlinkError: any) {
-                    if (unlinkError.code !== 'ENOENT') {
-                        console.error(`Eski dosya silinemedi (${filePath}):`, unlinkError);
+            // Eski kapak dosyasını fiziksel olarak sil
+            for (const oldCoverUrl of oldCoverUrls) {
+                if (oldCoverUrl && oldCoverUrl !== coverImage) {
+                    const filePath = path.join(projectRoot, 'public', oldCoverUrl);
+                    try {
+                        await fs.unlink(filePath);
+                    } catch (unlinkError: any) {
+                        if (unlinkError.code !== 'ENOENT') {
+                            console.error(`Eski kapak resmi silinemedi (${filePath}):`, unlinkError);
+                        }
                     }
                 }
             }
         }
 
-        // Güncellenen blogun slug'ını döndür (değişmedi ama yine de gönderelim)
-        res.json({ slug: currentSlug, message: 'Blog başarıyla güncellendi' }); 
+        // Galeri resimlerini güncelle (eğer galleryImages gönderildiyse)
+        if (galleryImages !== undefined && galleryImages !== null) {
+            // Eski galeri resimlerini al
+            const [oldGalleryRows] = await connection.execute<RowDataPacket[]>(
+                'SELECT image_url FROM blog_images WHERE blog_id = ? AND type = ?',
+                [blogId, 'gallery']
+            );
+
+            const oldGalleryUrls: string[] = oldGalleryRows.map(row => row.image_url);
+            const newGalleryUrls: string[] = galleryImages;
+
+            // Silinecek resimler = Eskilerde olup yeni gönderilmeyenler
+            const imagesToDelete = oldGalleryUrls.filter(url => !newGalleryUrls.includes(url));
+
+            // Eklenecek resimler = Yenilerde olup eski galeride olmayanlar
+            const imagesToAdd = newGalleryUrls.filter(url => !oldGalleryUrls.includes(url));
+
+            // Silinecekleri veritabanından sil
+            for (const url of imagesToDelete) {
+                await connection.execute(
+                    'DELETE FROM blog_images WHERE blog_id = ? AND image_url = ? AND type = ?',
+                    [blogId, url, 'gallery']
+                );
+
+                // Fiziksel dosyayı da sil
+                if (url) {
+                    const filePath = path.join(projectRoot, 'public', url);
+                    try {
+                        await fs.unlink(filePath);
+                    } catch (unlinkError: any) {
+                        if (unlinkError.code !== 'ENOENT') {
+                            console.error(`Galeri dosyası silinemedi (${filePath}):`, unlinkError);
+                        }
+                    }
+                }
+            }
+
+            // Eklenecekleri veritabanına ekle
+            for (const url of imagesToAdd) {
+                await connection.execute(
+                    'INSERT INTO blog_images (blog_id, image_url, type) VALUES (?, ?, ?)',
+                    [blogId, url, 'gallery']
+                );
+            }
+        }
+
+
+        await connection.commit();
+        connection.release();
+
+        res.json({ slug: currentSlug, message: 'Blog başarıyla güncellendi' });
     } catch (error) {
         if (connection) {
             await connection.rollback();

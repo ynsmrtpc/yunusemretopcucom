@@ -66,6 +66,7 @@ const AdminBlogEdit: React.FC = () => {
 
             let payload: BlogPost = {
                 ...values,
+                coverImage: values.coverImage || blog?.coverImage || "",
                 content,
                 plaintext
             };
@@ -85,7 +86,7 @@ const AdminBlogEdit: React.FC = () => {
 
             if (result.status === 200 || result.status === 201) {
                 toast.success(message);
-                navigate("/admin/blog");
+                // navigate("/admin/blog");
             } else {
                 toast.error(message);
             }
@@ -167,8 +168,14 @@ const AdminBlogEdit: React.FC = () => {
                                 <ImageUpload
                                     label="Kapak Resmi"
                                     name="coverImage"
-                                    value={values.coverImage}
-                                    onChange={(name, value) => setFieldValue(name, value)}
+                                    value={values.coverImage || blog?.coverImage || ""}
+                                    onChange={(name, value) => {
+                                        if (value && typeof value === "object" && "name" in value) {
+                                            setFieldValue(name, value);
+                                        } else if (typeof value === "string") {
+                                            setFieldValue(name, value);
+                                        }
+                                    }}
                                 />
 
                                 <ImageUpload
@@ -176,7 +183,15 @@ const AdminBlogEdit: React.FC = () => {
                                     name="galleryImages"
                                     multiple
                                     value={values.galleryImages}
-                                    onChange={(name, value) => setFieldValue(name, value)}
+                                    onChange={(name, value) => {
+                                        if (Array.isArray(value)) {
+                                            const oldImages = (values.galleryImages || []).filter(v => typeof v === "string");
+                                            const newFiles = value.filter(v => typeof v !== "string");
+                                            setFieldValue(name, [...oldImages, ...newFiles]);
+                                        } else {
+                                            setFieldValue(name, value);
+                                        }
+                                    }}
                                 />
                             </div>
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Key, useEffect, useState} from 'react';
+import {Link} from 'react-router-dom';
 import api from '../services/api';
 import {
     Card,
@@ -9,11 +9,11 @@ import {
     CardContent,
     CardFooter,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import {Button} from '@/components/ui/button';
 import SEO from '@/components/SEO';
-import { PortfolioSkeleton } from '@/components/skeletons/PortfolioSkeleton';
-import { ProjectList as Project } from '@/types/admin/types';
-import { AdminPageTitle } from '@/components/admin/AdminPageTitle';
+import {PortfolioSkeleton} from '@/components/skeletons/PortfolioSkeleton';
+import {ProjectList as Project} from '@/types/admin/types';
+import {AdminPageTitle} from '@/components/admin/AdminPageTitle';
 
 const Portfolio = () => {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -30,13 +30,22 @@ const Portfolio = () => {
         setLoading(true);
         setError(null);
         try {
-            const params = { page: page };
-            const { data } = await api.get('/projects', { params });
+            const params = {page: page};
+            const {data} = await api.get('/projects', {params});
+            data.projects.forEach((e: Project) => {
+                if (typeof e.technologies === 'string') {
+                    e.technologies = JSON.parse(e.technologies);
+                }
+            });
             setProjects(data.projects);
             setTotalPages(data.totalPages);
             setCurrentPage(data.currentPage);
-        } catch (err: any) {
-            setError('Projeler yüklenirken bir hata oluştu: ' + err.message);
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError('Projeler yüklenirken bir hata oluştu: ' + err.message);
+            } else {
+                setError('Projeler yüklenirken bilinmeyen bir hata oluştu.');
+            }
         } finally {
             setLoading(false);
         }
@@ -49,7 +58,7 @@ const Portfolio = () => {
     };
 
     if (loading && projects.length === 0) {
-        return <PortfolioSkeleton />;
+        return <PortfolioSkeleton/>;
     }
 
     if (error) {
@@ -79,7 +88,8 @@ const Portfolio = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {projects.map((project) => (
-                            <Card key={project.id} className="hover:shadow-xl transition-shadow flex flex-col justify-between w-full">
+                            <Card key={project.id}
+                                  className="hover:shadow-xl transition-shadow flex flex-col justify-between w-full">
 
                                 <CardHeader>
                                     <CardTitle className="text-xl">{project.title}</CardTitle>
@@ -90,7 +100,7 @@ const Portfolio = () => {
                                 <CardContent className="space-y-2 flex-1">
                                     <p className="text-gray-700 line-clamp-5">{project.description}</p>
                                     <div className="flex flex-wrap gap-2">
-                                        {project.technologies.map((tech, idx) => (
+                                        {project.technologies.map((tech: string, idx: Key | null | undefined) => (
                                             <span
                                                 key={idx}
                                                 className="bg-gray-100 text-gray-800 rounded-full px-2 py-1 text-xs font-medium"

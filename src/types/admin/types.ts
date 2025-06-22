@@ -29,7 +29,7 @@ export interface ProjectList {
     description: string;
     content: string;
     category: string;
-    technologies: Array<string>;
+    technologies: string | string[];
     status: "completed" | "in_progress";
     client: string;
     duration: string;
@@ -48,7 +48,7 @@ export interface ProjectPost {
     title: string;
     description: string;
     category: string;
-    technologies: Array<string>;
+    technologies: string[];
     status: "completed" | "in_progress";
     client: string;
     duration: string;
@@ -86,6 +86,7 @@ export interface Certification {
 }
 
 export interface AboutData {
+    id: number,
     content: string;
     plaintext: string;
     skills: string[];

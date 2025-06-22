@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link,  useParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -14,7 +14,6 @@ import ImageUpload from "@/components/admin/formElements/ImageUpload";
 import { processFormImages } from "@/utils/uploadHelpers";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import EditorContent from "@/components/admin/Editor/EditorContent";
-// import * as Yup from "yup";
 
 interface ContentProps {
     htmlData: string;
@@ -24,7 +23,6 @@ interface ContentProps {
 const AdminPortfolioEdit = () => {
     const { id: slug } = useParams<{ id: string }>();
     const isEditing = Boolean(slug);
-    const navigate = useNavigate();
     const [contentValues, setContentValues] = useState<ContentProps>({ htmlData: '', textData: '' });
     const [loading, setLoading] = useState(true);
     const [project, setProject] = useState<ProjectPost | null>(null);
@@ -41,6 +39,7 @@ const AdminPortfolioEdit = () => {
         setLoading(true);
         try {
             const response = await projectService.getById(projectSlug);
+            response.data.technologies = JSON.parse(response.data.technologies);
             setProject(response.data);
             setContentValues({
                 htmlData: response.data.content || '',
@@ -69,18 +68,6 @@ const AdminPortfolioEdit = () => {
         galleryImages: project?.galleryImages || [],
         slug: project?.slug || "",
     };
-
-    // const validationSchema = Yup.object({
-    //     title: Yup.string().required("Başlık gereklidir."),
-    //     description: Yup.string().required("Açıklama gereklidir."),
-    //     category: Yup.string().required("Kategori gereklidir."),
-    //     technologies: Yup.string().required("Teknolojiler gereklidir."),
-    //     year: Yup.number()
-    //         .required("Yıl gereklidir.")
-    //         .typeError("Yıl bir sayı olmalıdır."),
-    //     live_url: Yup.string().url("Geçerli bir URL giriniz."),
-    //     github_url: Yup.string().url("Geçerli bir URL giriniz."),
-    // });
 
     const handleSubmit = async (
         values: ProjectPost,
@@ -113,7 +100,6 @@ const AdminPortfolioEdit = () => {
 
             if (result.status === 200 || result.status === 201) {
                 toast.success(message);
-                // navigate("/admin/portfolio");
             } else {
                 toast.error(message);
             }
@@ -138,8 +124,7 @@ const AdminPortfolioEdit = () => {
     return (
         <Formik
             enableReinitialize
-            initialValues={initialValues as any}
-            // validationSchema={validationSchema}
+            initialValues={initialValues as never}
             onSubmit={handleSubmit}
         >
             {({ isSubmitting, setFieldValue, values }) => (

@@ -43,6 +43,10 @@ const About = () => {
         const fetchAbout = async () => {
             try {
                 const { data } = await aboutService.get();
+                data.skills = JSON.parse(data.skills);
+                data.experience = JSON.parse(data.experience);
+                data.education = JSON.parse(data.education);
+                data.certifications = JSON.parse(data.certifications);
                 setAbout(data);
                 setLoading(false);
             } catch (err) {

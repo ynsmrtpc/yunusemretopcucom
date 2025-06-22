@@ -26,24 +26,30 @@ const getAbout: RequestHandler = async (_req, res, next): Promise<void> => {
 
 // About bilgisini güncelle
 const updateAbout: RequestHandler<object, object, AboutRequestBody> = async (req, res, next): Promise<void> => {
-    const { content, skills, experience, education, plaintext, certifications } = req.body;
-    const {htmlData,textData} = content;
-    const JSONskills = (typeof skills === "string") ? skills.split(",") : skills;
+    const { id, content, skills, experience, education, plaintext, certifications } = req.body;
     try {
         const [existingRows] = await getDB().execute<RowDataPacket[]>('SELECT * FROM about LIMIT 1');
         
         if (existingRows.length === 0) {
             // Kayıt yoksa yeni kayıt oluştur
+            const params = [
+                content, JSON.stringify(skills), JSON.stringify(experience), JSON.stringify(education), plaintext, JSON.stringify(certifications)
+            ].map(param => param === undefined ? null : param);
+
             const [result] = await getDB().execute<ResultSetHeader>(
                 'INSERT INTO about (content, skills, experience, education,plaintext,certifications) VALUES (?, ?, ?, ?, ?, ?)',
-                [htmlData, JSONskills, experience, education, textData,certifications]
+                params
             );
             res.status(201).json({ id: result.insertId, message: 'About bilgisi başarıyla oluşturuldu' });
         } else {
+            const params = [
+                content, JSON.stringify(skills), JSON.stringify(experience), JSON.stringify(education), plaintext, JSON.stringify(certifications), id
+            ].map(param => param === undefined ? null : param);
+
             // Varolan kaydı güncelle
             await getDB().execute<ResultSetHeader>(
-                'UPDATE about SET content = ?, skills = ?, experience = ?, education = ?, plaintext = ?, certifications = ?',
-                [htmlData, JSONskills, experience, education, textData,certifications]
+                'UPDATE about SET content = ?, skills = ?, experience = ?, education = ?, plaintext = ?, certifications = ? WHERE id = ?',
+                params
             );
             res.json({ message: 'About bilgisi başarıyla güncellendi' });
         }

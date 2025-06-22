@@ -47,33 +47,37 @@ export const processFormImages = async <T extends Record<string, any>>(values: T
     const newValues = { ...values };
     const uploadPromises: Promise<void>[] = [];
 
-    // Form alanlarını kontrol et ve dosya varsa yükle
     for (const key in newValues) {
         const value = newValues[key];
-        
+
+        // Çoklu dosya kontrolü
+        if (Array.isArray(value) && value.length > 0) {
+            // Sadece File olanları upload et, string olanları bırak
+            const filesToUpload = value.filter((v: any) => typeof v === 'object' && 'name' in v);
+            const stringsToKeep = value.filter((v: any) => typeof v === 'string');
+            if (filesToUpload.length > 0) {
+                uploadPromises.push(
+                    uploadFiles(filesToUpload as File[])
+                        .then((urls) => {
+                            // Hem eski stringler hem yeni yüklenenler birleştirilsin
+                            newValues[key] = [...stringsToKeep, ...(Array.isArray(urls) ? urls : [urls])] as any;
+                        })
+                );
+            } else {
+                newValues[key] = stringsToKeep as any;
+            }
+        }
         // Tekli dosya kontrolü
-        if (value && typeof value === 'object' && 'name' in value && 'type' in value && 'size' in value) {
+        else if (value && typeof value === 'object' && 'name' in value && 'type' in value && 'size' in value) {
             uploadPromises.push(
                 uploadFiles(value as File)
                     .then((url) => {
-                        // Type assertion kullanarak tip uyumsuzluğunu çözüyoruz
                         newValues[key] = url as any;
-                    })
-            );
-        }
-        // Çoklu dosya kontrolü
-        else if (Array.isArray(value) && value.length > 0 && value[0] && typeof value[0] === 'object' && 'name' in value[0]) {
-            uploadPromises.push(
-                uploadFiles(value as File[])
-                    .then((urls) => {
-                        // Type assertion kullanarak tip uyumsuzluğunu çözüyoruz
-                        newValues[key] = urls as any;
                     })
             );
         }
     }
 
-    // Tüm yükleme işlemlerinin tamamlanmasını bekle
     if (uploadPromises.length > 0) {
         await Promise.all(uploadPromises);
     }

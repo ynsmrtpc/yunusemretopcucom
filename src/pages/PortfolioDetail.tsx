@@ -1,35 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { projectService } from '../services/api';
-import {
-    Card,
-    CardContent,
-} from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
 import ImageGallery from '@/components/ImageGallery';
 import SEO from '@/components/SEO';
 import { PortfolioDetailSkeleton } from '@/components/skeletons/PortfolioDetailSkeleton';
-import { ImGithub } from 'react-icons/im';
 import { Link } from 'react-router-dom';
 import { CgMediaLive } from "react-icons/cg";
 import { ProjectPost } from "@/types/admin/types.ts";
 import { FaGithub } from 'react-icons/fa';
 import { Eye } from 'lucide-react';
-
-interface Project {
-    id: number;
-    title: string;
-    description: string;
-    content: string;
-    image?: string;
-    coverImage?: string;
-    galleryImages?: string[];
-    technologies: string[];
-    github_url: string;
-    live_url: string;
-    slug?: string;
-    views?: number;
-}
 
 const PortfolioDetail = () => {
     const { id: slug } = useParams<{ id: string }>();
@@ -45,6 +26,7 @@ const PortfolioDetail = () => {
             try {
                 // Proje verisini çek
                 const response = await projectService.getById(slug);
+                response.data.technologies = JSON.parse(response.data.technologies);
                 setProject(response.data);
 
                 // Görüntüleme sayısını artır (arka planda)
@@ -74,15 +56,6 @@ const PortfolioDetail = () => {
             </div>
         );
     }
-
-    // HTML içeriğinden metin çıkarma (SEO açıklaması için)
-    const getTextFromHtml = (html: string) => {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        return tempDiv.textContent || tempDiv.innerText || '';
-    };
-
-    const description = project.description || getTextFromHtml(project.content).substring(0, 160);
     const keywords = project.technologies.join(', ');
     const siteUrl = import.meta.env.VITE_SITE_URL || 'https://www.yunusemretopcu.com';
     const projectUrl = `${siteUrl}/portfolio/${project.slug || slug}`;
@@ -106,7 +79,7 @@ const PortfolioDetail = () => {
             "@type": "Brand",
             "name": "Portfolio"
         },
-        "additionalProperty": project.technologies.map(tech => ({
+        "additionalProperty": project.technologies.map((tech) => ({
             "@type": "PropertyValue",
             "name": "technology",
             "value": tech
